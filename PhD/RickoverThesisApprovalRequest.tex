@@ -1,0 +1,83 @@
+\documentclass[12pt, letterpaper]{article}
+\usepackage[letterpaper, textwidth=6.5in, textheight=9in]{geometry}
+\usepackage{amsmath}
+\date{\today}
+\title{Request for Thesis Research Assignment}
+\author{Rachel Slaybaugh}
+\begin{document}
+\maketitle
+
+    I propose to conduct research into methods for improving deterministic solution techniques for the neutron transport equation. Specifically, I will investigate eigenvalue acceleration techniques and preconditioning methods for a massively parallel discrete ordinates code. The project I have selected will be implemented in Oak Ridge National Laboratory's (ORNL) Denovo code, currently being developed primarily by Tom Evans and Greg Davidson. This code is designed to operate in a massively parallel environment and uses the multigroup $S_{N}$ approximation to solve the transport equation \cite{Den}
+\begin{align}
+   \mathbf{\hat{\Omega}}_{n} \cdot \nabla \psi^{g}_{n}(\mathbf{r}) + \sigma^{g} (\mathbf{r}) \psi^{g}_{n}(\mathbf{r}) &= \sum_{g'=0}^{G}  \sum_{n'=0}^{N} \sigma_{s}^{gg'}(\mathbf{r}, \mathbf{\hat{\Omega}}_{n'} \cdot \mathbf{\hat{\Omega}}_{n}) \psi^{g'}_{n'}(\mathbf{r}) w_{n'} \nonumber \\
+&+ \frac{\chi^{g}}{k} \sum_{g'=0}^{G} \nu \sigma_{f}^{g'}(\mathbf{r})\phi^{g'}(\mathbf{r}),
+\end{align}
+where: \\
+\indent $\psi^{g}_{n} = \psi^{g}(\mathbf{\hat{\Omega}}_{n})$ is the angular flux for energy group g, \\
+\indent $\sigma^{g}$ is the total group cross section, \\
+\indent $\sigma^{gg'}_{s}$ is the scattering cross section from group g' to into group g, \\
+\indent $\sigma^{g'}_{f}$ is the fission cross section for group g', \\
+\indent $\chi^{g}$ is the fission spectrum for group g, \\
+\indent $k$ is the neutron multiplication factor or eigenvalue, \\
+\indent $\phi^{g} = \sum_{n=0}^{N} \psi^{g}_{n} w_{n}$ is the scalar flux for group g, and \\
+\indent $w_{n}$ is a quadrature weight. \\
+
+    The transport equation is then discretized in space (omitted for brevity). We can express the resulting equation in operator form by defining the following operators \cite{Den}:
+
+\indent $\mathbf{L} = \mathbf{\hat{\Omega}} \cdot \nabla + \sigma$ is the transport operator, \\
+\indent $\mathbf{M}$ is the operator that converts harmonic moments into discrete angles, \\
+\indent $\mathbf{S}$ is the scattering matrix, \\
+\indent $\mathbf{f}$ is the fission cross sections, and \\
+\indent $\phi = \mathbf{D}\psi$, where $\mathbf{D}$ is the discrete-to-moment operator. 
+
+\noindent With this notation Eqn. (1) may be written as
+    
+\begin{equation}
+  (\mathbf{I} - \mathbf{TS}) \phi = \lambda\mathbf{TF}\phi,
+\end{equation}
+where: \\ 
+\indent $\mathbf{T} =  \mathbf{DL^{-1}M}$, \\
+\indent $\mathbf{F} = \boldsymbol{\chi}\mathbf{f^{T}}$, and \\
+\indent $\lambda = k^{-1}$. 
+
+    This traditional formulation has two challenges. First, the dominance ratio is near one, which causes slow convergence. Second, parallel decomposition can only be performed efficiently in space and angle \cite{Den}. It is possible to decompose this formulation in energy by using a Krylov method for the outer iteration (over all energy groups), but this is not efficient because $\mathbf{S}$ is sparse. To address these problems, Denovo will use a shifted eigenvalue method. That is, we instead solve 
+\begin{equation}
+  (\mathbf{I} - \mathbf{T\tilde{S}}) \phi = (\lambda - \omega) \mathbf{TF}\phi \text{ ,}
+\end{equation}
+where $\hspace{0.1cm}\mathbf{\tilde{S}} = \mathbf{S} - \omega\mathbf{F}$, and $\omega$ is the parameter by which the eigenvalue is shifted. 
+
+    Denovo uses the Koch-Baker-Alcouffe (KBA) parallel wavefront algorithm to perform the transport sweep, which allows parallelization of space and angle \cite{kba}. Currently the inner iterations (within group scattering) are solved using Krylov methods (either restarted GMRES or BiCGSTAB), and Gauss Seidel is used to handle upscattering if needed \cite{Den}. 
+    
+    I will implement the Rayleigh Quotient Iteration (RQI) method to update the shifted eigenvalue, which will facilitate faster eigenvalue calculations \cite{rqi}. By shifting the eigenvalue, we create a dense, rather than lower triangular, scattering matrix, $(\mathbf{I} - \mathbf{T\tilde{S}})$. The change from sparse to dense allows the matrix to be efficiently inverted using Krylov methods rather than Gauss Seidel. The RQI method lets us rapidly find the dominant eigenvalue. As a result, the energy groups can be decoupled effectively, and therefore decomposed for parallel computation. This will allow energy to be added to the KBA process, thereby providing another dimension of phase-space that can be parallelized. I will assist in implementing and testing the use of Krylov methods for the outer iterations and eigenvalue solver. My focus will be on how this method scales and enhances code performance. The shifted eigenvalue method has not been implemented for the neutron transport equation previously. It has, however, been used in diffusion. 
+
+    Additionally, I will investigate a new preconditioning method that can be parallelized with the new outer iteration and eigenvalue solution methods. The matrix A is never formed, so we cannot use standard factorization techniques to do matrix-based preconditioning. However, based on the physical problem we know some things about the matrices of which A is comprised. We can use this information to create a physics-based right preconditioner. Defining $\tilde{q} = (\lambda - \omega) \mathbf{TF}\phi$, and multiplying Eqn. (2) by $(\mathbf{I} - \mathbf{T\bar{S}}_{L})^{-1}$, we obtain
+
+\begin{equation}
+   (\mathbf{I} -\mathbf{T\bar{S}}_{L})^{-1} (\mathbf{I} -\mathbf{T\bar{S}}) \phi = (\mathbf{I} - \mathbf{T\bar{S}}_{L})^{-1} \tilde{q} \text{ ,}
+\end{equation}
+where $\hspace{0.1cm}\mathbf{\bar{S}} = \mathbf{\bar{S}}_{U} + \mathbf{\bar{S}}_{L}$.
+
+In summary, I will conduct the following research: 
+\begin{enumerate}
+\item An investigation of scaling issues for the new RQI formulation. This will relate to using Krylov methods for the eigenvalue calculations and to the details of decomposing the problem in energy. 
+\item An investigation of sweep-based preconditioners. I will research and implement a preconditioner for the downscatter portion of the problem. Preconditioners are more difficult to parallelize than the iteration methods, so tradeoffs between preconditioning and increased iterations will be a natural area of research. 
+\end{enumerate}
+
+    
+From this project I will learn more about transport problems and solvers, preconditioning methods, parallel computation, reactor physics, and gain experience collaborating on a large project. All of these things are of benefit to the fellowship program. 
+
+    This research is part of an INCITE grant awarded to ORNL. The overarching goal of the project is to learn in detail the sensitivity of full-core transport calculations to data uncertainty and mesh resolution. The intent is to use this information to better choose the level of fidelity required for multi-physics coupling (e.g., optimization of resource allocation based on data sensitivity vs. coolant density sensitivity)
+
+    Conducting my research through this project at ORNL will be beneficial to NR. I will gain experience using massively parallel computers via my access to the Jaguar machine. While the NR laboratories may not have machines this large yet, they are moving in that direction. They will need people who have experience writing programs for such environments. I also have the opportunity to network with the staff at ORNL, and this will enable me to bring added expertise and experience with me to KAPL or Bettis. These relationships may also help foster more collaboration between ORNL and NR in the future. The training and experience I will gain through this work will enhance my value as a future employee.  
+    \\
+\begin{thebibliography}{3}
+
+ \bibitem{kba} Baker, Randal S. and Kenneth R. Koch. ``An $S_{n}$ Algorithm for the Massively Parallel CM-200 Computer.'' \emph{Nuclear Science and Engineering} 128 (1998) : 312-320. Print.  
+
+ \bibitem{Den} Evans, T M. \underline{Denovo Methods Manual}. Oak Ridge, TN: Oak Ridge National Laboratory, 2009. Electronic. 
+
+ \bibitem{rqi} Parlett, B.N. ``The Rayleigh Quotient Iteration and Some Generalizations for Nonnormal Matrices.'' \emph{Mathematics of Computation} 28.127 (1974) : 679-693. Print. 
+
+\end{thebibliography}
+
+\end{document}

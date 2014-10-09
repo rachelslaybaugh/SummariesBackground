@@ -1,0 +1,329 @@
+\documentclass[12pt,twoside]{book}
+\usepackage[letterpaper, textwidth=6.5in, textheight=9in]{geometry}
+\usepackage{amsmath}
+\date{\today}
+\newcommand{\ve}[1]{\ensuremath{\mathbf{#1}}}
+\newcommand{\evec}{eigenvector}
+\newcommand{\eval}{eigenvalue}
+\newcommand{\epair}{eigenpair}
+\title{Theory for RQI Convergence Issues}
+\author{Rachel Slaybaugh}
+\begin{document}
+%-----------------------------------------------
+\maketitle
+
+%--------------------------------------------------------------------------------------------------------------------------------------------------
+\section{Power Iteration}
+
+Power iteration can be viewed as a Krylov method with a subspace of 1. If we write the transport equation as:
+
+\begin{equation}
+  \mathbf{DL^{-1}}\phi = \mathbf{MS}\phi + \frac{1}{k}\mathbf{F}\phi \text{ ,}
+\end{equation}
+
+then we can write $\mathbf{A }= \mathbf{D(L - MSD)^{-1}F}$. We can now define power iteration as
+
+\begin{align}
+  \phi^{(l+1)} &= \frac{1}{k}\mathbf{A}\phi^{(l)}  \\
+  &\text{ OR} \nonumber \\
+  k^{(l+1)} &= k^{(l)}\frac{||\phi^{(l+1)}||}{||\phi^{(l)}||} \text{ .}
+\end{align}
+
+We could alternatively use the Rayleigh Quotient which usually improves efficiency because it provides a better estimate of the eigenvalue earlier in the iterative process. Here $(\cdot , \cdot)$ denotes a discrete inner product over all cells:
+
+\begin{equation}
+  k^{(l+1)} = \frac{(\mathbf{A}\phi^{(l)}, \phi^{(l)})}{(\phi^{(l)}, \phi^{(l)})} \text{ .}
+\end{equation}
+
+The convergence rate of Power iteration is determined by the dominance ratio, $\delta = \frac{|\lambda_{2}|}{|\lambda_{1}|}$. Classically this has been accelerated using Chebyshev iterative techniques or Successive Over Relaxation. They use a linear combination of a small number of previous iterates to update the scalar flux (7).\\
+
+\emph{k eigenvalue}\\
+An eigenvalue equation can be written as $\mathbf{A} \phi^{i} =  \mathbf{B} \phi^{i-1}$ where $\mathbf{A}$ is the transport-interaction matrix and $\mathbf{B}$ is the fission matrix. In this case k, the multiplication factor, can be thought of as a ratio between the numbers of neutrons in successive generations. As $i$ increases, $\phi^{i}/\phi^{i-1}$ approaches $k$. This is identical to the power iteration method where we write $\phi^{i} = \mathbf{C}\phi^{i-1}$ and the ratio $||\phi^{i}||/||\phi^{i-1}||$ approaches $\lambda_{1}$ (the dominant eigenvalue of $\mathbf{C}$ where $\mathbf{C}$ = $\mathbf{A^{-1}B}$ (8). 
+
+We can interpret $k$ as the multiplication factor of a reactor and the remaining eigenvalues (that are real and positive) can express subcritical modes of a reactor configuration. This can give information about regional instabilities using modal analysis (10). Any negative eigenvalues have no physical meaning and are a result of spatial discretization (9).  
+
+\emph{inverse power iteration}\\
+If there is a good estimate, $\gamma$, for the dominant eigenvalue, $\lambda_{1} = k$ then we can take advantage of this by using inverse power iteration. 
+\begin{equation}
+  \phi^{i} = (-\mathbf{C} + \gamma\mathbf{I})^{-1} \phi^{i-1} \text{   for } i \text{ = 1, 2,...}
+\end{equation}  
+
+This means $|\lambda_{1} - \gamma| < |\lambda_{j} - \gamma| \le |\lambda_{i} - \gamma|$ for $i$ = 2, 3, ..., N. $\lambda_{j}$ is the second closest to $\gamma$ in magnitude. When $\gamma$ is close to $\lambda_{1}$ then the rate of convergence can be much faster than the regular power method (8). 
+
+%--------------------------------------------------------------------------------------------------------------------------------------------------
+\section{Conditioning and Convergence issues with Inverse Iteration}
+
+\subsection{Condition Number}
+A \emph{well-conditioned} problem is one with the property that all small perturbations of $x$ lead to only small changes in $f(x)$. An \emph{ill-conditioned} problem is one with the property that some small perturbation of $x$ leads to a large change in $f(x)$. Large and small mean different things in different contexts. 
+
+$\delta x$ is a small perturbation of $x$, which causes $\delta f = f(x + \delta x) - f(x)$. The absolute condition number, $\hat{\kappa} = \hat{\kappa}(x)$ of $f$ at $x$ is
+%
+\begin{equation}
+  \hat{\kappa} = \lim_{\delta \rightarrow 0} \sup_{||\delta x|| \le \delta} \frac{||\delta f||}{||\delta x||} \:.
+\end{equation}
+%
+Note: supremum is defined as the smallest real number that is greater than or equal to every number in the set in question [wikipedia, June 14, 2011]. If the $\delta$s are infinitessimal and $f$ is differentiable, then we can rewrite this in terms of the Jacobian. To first order $\delta f \approx J(x) \delta x$, then
+%
+\begin{equation}
+  \hat{\kappa} = ||J(x)|| \:.
+\end{equation}
+
+The relative condition number, $\kappa = \kappa(x)$ is 
+%
+\begin{align}
+  \kappa &= \lim_{\delta \rightarrow 0} \sup_{||\delta x|| \le \delta} \biggl(\frac{||\delta f||}{||f(x)||} / \frac{||\delta x||}{||x||} \biggr)  \:, \\
+  \kappa &= \frac{||J(x)||}{||f(x)|| / ||x||} \:.
+\end{align}
+We usually care about the relative condition number because floating point arithmetic introduces relative errors. A small condition number corresponds to well-conditioned problems, and vice versa.
+
+For a matrix, 
+\begin{align}
+  \kappa &= \sup_{\delta x} \biggl(\frac{||A(x + \delta x) - Ax||}{||Ax||} / \frac{||\delta x||}{||x||} \biggr) \:, \\
+  &= sum_{\delta x} \frac{||A \delta x||}{||\delta x||} / \frac{||Ax||}{||x||} \:, \\
+  \kappa &= ||A||\frac{||x||}{||Ax||} \:.
+\end{align}
+%
+If $A$ is square and non-symmetric, then $||x||/||Ax|| \le ||A^{-1}||$. This gives
+%
+\begin{equation}
+  \kappa \le ||A|| \text{ }||A^{-1}|| \:.
+\end{equation}
+%
+Note also that we can replace the denominator with $b$ since $Ax = b$: $\kappa = ||A|| \frac{||x||}{||b||} \le ||A||\text{ } ||A^{-1}||$. We can also consider the case of a fixed solution and a changed right hand side. In this case we simply replace $||A||$ with $||A^{-1}||$, giving $\kappa = ||A^{-1}|| \frac{||b||}{||x||} \le ||A|| \text{ }||A^{-1}||$. If the two norm is used, in each case equality holds when $x$ is a multiple of the right singular vector of $A$ corresponding to the minimal singular value $\sigma_{m}$ and when $b$ is a multiple of the left singular vector of $A$ corresponding to the maximal singular value, $\sigma_{1}$.
+
+The condition number of $A$, as opposed to the condition number of the problem instance (when we have also a $b$ and an $x$ in mind) is
+\begin{equation}
+  \kappa(A) = ||A|| \text{ }||A^{1-}|| \:.
+\end{equation}
+%
+If $A$ is singular, its condition number is infinity. If the two-norm is used, then $||A|| = \sigma_{1}$ and $||A^{-1}|| = \sigma_{m}$ and $\kappa(A) = \frac{\sigma_{1}}{\sigma_{m}}$. The ratio $\frac{\sigma_{1}}{\sigma_{m}}$ can be interpreted as the eccentricity of the hyperellipse that is the image of the unit sphere of $\mathcal{C}^{m}$ under $A$.
+
+What about when we perturb $A$? For a fixed $b$, this will cause $x$ to change by an infinitesimal amount. The new system becomes
+%
+\begin{equation}
+  (A + \delta A)(x + \delta x) = b \:.
+\end{equation}
+%
+If we recognize $Ax = b$ and drop the $(\delta A)(\delta x)$ term we get $\delta x = -A^{-1}(\delta A) x$, which implies $||\delta x|| \le ||A^{-1}||\text{ } ||\delta A|| \text{ }||x||$.
+\begin{equation}
+  \frac{||\delta x||}{||x||} / \frac{||\delta A||}{||A||} \le ||A^{-1}|| \text{ }||A|| = \kappa(A) \:.
+\end{equation}
+%
+Equality holds when $||A^{-1}(\delta A) x|| = ||A^{-1}|| \text{ }||\delta A||\text{ } ||x||$. 
+
+This means \emph{the condition number of} $x=A^{-1}b$ \emph{with respect to perturbations to} $A$ \emph{is the condition number of} $A$. [trefethen and bau chapter 12].
+
+\subsection{Backward Stability}
+An algorithm $\tilde{f}$ for a problem $f$ is backwards stable if, for each $x \in X$,
+%
+\begin{equation}
+  \tilde{f}(x) = f(\tilde{x}) \qquad \text{for some } \tilde{x} \text{ with } \frac{||\tilde{x} - x||}{||x||} = O(\epsilon _{machine}) \:.
+\end{equation}
+%
+This means that a backwards-stable algorithm will give the right answer to nearly the right question. [T and B pg. 104].
+
+For a backwards stable algorithm, the accuracy depends on the condition number, $\kappa(x)$ of $f$. The relative errors satisfy [T and B pg. 110]:
+%
+\begin{equation}
+  \frac{||\tilde{f}(x) - f(x)||}{||f(x)||} = O(\kappa(x) \epsilon _{machine}) \:.
+\end{equation}
+%
+
+%----------------------------------------------------------------------
+\section{Iterative methods facts}
+In a general sense, the number of steps required for convergence in iterative methods depends on the spectral properties of $A$. Convergence of Krylov subspace iterative algorithms is closely related to problems of approximation functions $f(x)$ by polynomials $p(z)$ on subsets of the real axis or the complex plane [T and B Lecture 32].
+
+\subsection{Arnoldi}
+In the Arnoldi method, the $n$th column of $AQ_{n} = Q_{n+1}\tilde{H}_{n}$ satisfies an $(n+1)$-term recurrence relation:
+%
+\begin{equation}
+  Aq_{n} = h_{1n}q_{1} + \dots + h_{nn}q_{n} + h_{n+1,n}q_{n+1} \:.
+\end{equation} 
+%
+Note that $K_{n} = Q_{n}R_{n}$ (the Krylov subspace matrix), but in practice we don't form $R$ or $K$. The columns of $K_{n}$ tend to approximate the same dominant eigenvector of $A$, and are therefore ill-conditioned. [T and B Lecture 33]
+
+For finding eigenvalues (which is what one typically does with Arnoldi), geometric (i.e.\ linear) convergence is observed in practice for some eigenvalues. When this happens one can be reasonably confident that those eigenvalues are of $A$. 
+
+Let $x$ be a vector in a Krylov subspace $\mathcal{K}_{n}$. It can be expressed as
+%
+\begin{equation}
+  x = c_{0}b + c_{1}Ab + c_{2}A^{2}b + \dots + c_{n-1}A^{n-1}b \:.
+\end{equation}
+This is a polynomial in $A$ times $b$. Define $P_{n}$ = \{monic polynomials of degree $n$\}. Monic polynomials have a 1 for the coefficient of the term that is degree $n$; $c_{n} = 1$. The Arnoldi approximation problem can be thought of as a method for finding $p^{n} \in P_{n}$ such that $||p^{n}(A)b||$ = minimum. As long as Arnoldi doesn't break down, there is a unique solution, $p^{n}$ that is the characteristic polynomial of $H_{n}$. The roots of the optimal polynomial are the Ritz values generated by the Arnoldi method.
+
+\noindent Arnoldi is
+\begin{itemize}
+ \item scale invariant 
+ \item has invariance under unitary similarity transformations.
+  \item invariant under translation
+  \item the Ritz vectors (the $Q_{n}y_{j}$ that correspond to the eigenvectors $y_{j}$ of $H_{n}$) do not change under these transformations either.
+\end{itemize}
+The convergence properties of Arnoldi are not completely understood. [T and B Lecture 34]
+
+\subsection{GMRES}
+\noindent GMRES solves the approximation problem find $p_{n} \in P_{n}$ such that 
+%
+\begin{align}
+  ||p_{n}(A)b|| &= \text{minimum,} \qquad \text{where} \\
+  P_{n} &= \{ \text{polynomials } p \text{ of degree } \le n \text{ with } p(0)=1\}.
+\end{align}
+%
+This polynomial requires $c_{0} = 1$ rather than $c_{n} = 1$, which was the case with Arnoldi. This is now a normalization at $z=0$ rather than $z=\infty$. GMRES chooses the coefficients of the polynomial to minimize the norm of the residual, $r_{n} = b - Ax_{n} = (I - Aq_{n}(A))b$. Then note $p_{n}(z) = 1 - zq(z)$. Finally, $p_{n}(A)b = r_{n}$. So we can see that the difference here is that Arnoldi was finding the minimum polynomial for $x$, and this is finding the minimum polynomial for the residual (and it is clear where the change in normalization comes from.
+
+GMRES is 
+\begin{itemize}
+ \item scale invariant 
+ \item has invariance under unitary similarity transformations.
+  \item \emph{not} invariant under translation, which we can see from the different polynomial basis.
+  \item It's behavior depends strongly on the position of the origin, loosely speaking, the condition number of $A$.
+  \item monotonically convergent: $||r_{n+1}|| \le ||r_{n}||$.
+\end{itemize}
+
+We can use this information to consider convergence of GMRES (note, they say that the practical question really becomes how good of a preconditioner can you make). We can say $||r_{n}|| \le ||p_{n}(A)||\text{ }||b||$. In general, the size of this is set by the norm of the polynomial. The convergence rate is then set by:
+%
+\begin{equation}
+  \frac{||r_{n}||}{||b||} \le \inf_{p_{n}\in P_{n}} ||p_{n}(A)|| \:.
+\end{equation}
+
+Now we want to know how small $||p_{n}(A)||$ can be for a given $n$ and $A$. Define the scalar $||p||_{S} = \sup_{z\in S} |p(z)|$. Also let $A=V \Lambda V^{-1}$ for a non-singular $V$ and diagonal matrix $\Lambda$. Then
+%
+\begin{equation}
+  ||p(A)|| \le ||V|| \text{ } ||p(\Lambda)|| \text{ } ||V^{-1}|| = \kappa(V) ||p||_{\Lambda(A)} \:.
+\end{equation}
+
+All of this can be combined to say that at step $n$ of GMRES, the residual satisfies
+%
+\begin{equation}
+  \frac{||r_{n}||}{||b||} \le \inf_{p_{n}\in P_{n}} ||p_{n}(A)|| \le \kappa(V)  \inf_{p_{n}\in P_{n}} ||p||_{\Lambda(A)} \:,
+\end{equation}
+%
+where $\Lambda(A)$ is the set of eigenvalues for $A$ and $V$ is a non-singular matrix of eigenvectors. What this means, is that if $A$ is not too far from normal and if properly normalized $n$ degree polynomials can be found whose size on the spectrum $\Lambda(A)$ decreases quickly with $n$, then GMRES converges quickly. [T and B lecture 35]
+
+See example 35.1 and 35.2 starting on pg. 271 for useful information. Also exercises 35.3 and 35.6.
+
+GMRES is backwards stable [Paige, SIAM paper].
+
+
+
+\subsection{CG, CGN, and BCG}
+Conjugate gradient (CG) requires a symmetric positive definite matrix (SPD), and we only have positive definite. The convergence of CG also depends on the condition number ($\kappa = \frac{\lambda_{max}}{\lambda_{min}}$ where the $\lambda$s are the extreme eigenvalues of $A$. [T and B Lecture 38].
+ 
+The CGN method is conjugate gradients applied to the normal equations and this does not require that a matrix be SPD, simply non-singular, 
+ %
+ \begin{equation}
+   A^{*}Ax = A^{*}b \:.
+ \end{equation}
+ %
+The iterates belong to a Krylov subspace generated by $A^{*}A$, which is different from the other Krylov methods discussed. $\mathcal{K}_{n} = \{A^{*}b, (A^{*}A)A^{*}b, \hdots, (A^{*}A)^{n-1}A^{*}b\}$. This method minimizes the residual (like GMRES), rather than the error (like regular CG). The convergence of CGN is governed by the eigenvalues associated with $A^{*}A$; these are the squares of the singular values of $A$. If $A$ has condition number $\kappa$, then $A^{*}A$ has condition number $\kappa^{2}$. This means that often CGN does not have good convergence properties, but it can be really useful when the singular values of a matrix are well behaved and the eigenvalues are not.
+ 
+Biorthogonalization methods are for non-hermitian matrices. The Lanczos method is a tridiagonal orthogonalization; it produces a unitary reduction of a hermitian matrix to tridiagonal form. When the matrix is not hermitian you must trade out the tridiagonal form or the unitary transformations. GMRES gives up tridiagonal; biorthogonalization methods give up unitary transformations and keep the tridiagonal result.
+ 
+Tridiagonal biorthogonalization: $A = VTV^{-1}$ where $V$ is nonsingular, but generally nonunitary and $T$ is tridiagonal. Define $V^{-*} = (V^{*})^{-1} = (V^{-1})^{*}$. Biorthogonal means that the columns of $V$ are not orthogonal to one another, but they are orthogonal to the columns of $V^{-*}$. The solutions are drawn from Krylov subspaces that are biorthogonal.
+
+Biconjugate Gradient (BCG) is a biorthogonalization method that enforces an orthogonality condition between the residual and the Krylov subspace from $V^{-*}$. This does not minimize the residual, but it has a 3-term recurrence. The convergence can be erratic and the end accuracy can be worse than GMRES because of rounding errors. There are a bunch of variants of BCG that attempt to fix these issues, one of which is Bi-CGstab. [T and B Lecture 39]. 
+
+
+ 
+%----------------------------------------------------------------------
+\section{Rayleigh Quotient}
+First order perturbation expansions for eigenvalues. Let $(\lambda, x)$ be a simple eigenpair of $\ve{A}$. If we add a perturbation such that $\tilde{\ve{A}} = \ve{A} + \ve{E}$ then if $\ve{E}$ is small there is a simple eigenpair $(\tilde{\lambda}, \tilde{x})$ that approaches $(\lambda, x)$ as $\ve{E} \to 0$. Let $\tilde{\lambda} = \lambda + \phi$. If $y^{T}\tilde{x} = 1$ (normalize $\tilde{x}$) then $\tilde{x} = x + \ve{X}p$, note that $\ve{X} = \{x_{1} x_{2} ... x_{n}\}$ . With these terms, the Rayleigh Quotient can be defined as $y^{T}\tilde{\ve{A}}x$. 
+
+Let $r = \ve{A}u - \mu u$. To minimize $||r||_{2}$, set $\mu = \frac{u^{T}\ve{A}u}{u^{T}u}$, this is the RQ, where $r \perp u$. For $v^{T}u \ne 0$, we can define the RQ as:
+\begin{equation}
+  \frac{v^{T}\ve{A}u}{v^{T}u}
+\end{equation}
+
+If either $v$ or $u$ is an eigenvector of $\ve{A}$, then the RQ produces the corresponding eigenvalue. If either is near an \evec\ then the RQ approximates the \eval. In power method, the RQs $\frac{u_{k}^{T}\ve{A}u_{k}}{u_{k}^{T}u_{k}}$ provide an increasingly accurate approx to $\lambda$. If the RQ is used as the shift in inverse iteration, you get RQI. 
+
+The generalized \eval\ problem is $\ve{A}x = \lambda \ve{B}x$, where $(\lambda, x)$ is a right \epair\ of the pencil $(\ve{A}, \ve{B})$ for $x \ne 0$. There is a left \epair\ if $y^{T}\ve{A} = \lambda y^{T}\ve{B}$, $y \ne 0$. Let $\langle \alpha, \beta \rangle$ be a simple \eval\ of pencil $(\ve{A}, \ve{B})$. If $x$ and $y$ are right and left \evec s corresponding to $\langle \alpha, \beta \rangle$, then $\langle \alpha, \beta \rangle = \langle y^{T} \ve{A} x, y^{T} \ve{B} x \rangle$. This means the ordinary form of the \eval\ is:
+\begin{equation}
+ \lambda = \frac{y^{T} \ve{A} x}{y^{T} \ve{B} x} \:,
+\end{equation}
+which is the generalization of the RQ. 
+
+If $\ve{X}$ is an eigenbasis of $\ve{A}$ then $\ve{X}^{T}\ve{A}\ve{X}$ is the RQ of $\ve{A}$, which is an eigenblock. For the Arnoldi method, ${H}_{k} = \ve{V}_{k}^{T}\ve{A}\ve{V}_{k}$. This is just the RQ wrt the basis $\ve{V}_{k}$, in prelim: and we know that $\ve{V}$ is a basis for $\mathcal{V}$ and eigenspace $\mathcal{X} \in \mathcal{V}$). Thus, Arnoldi is gives a decomp to compute Ritz pairs. A less restrictive version of this is applicable to Krylov methods in general \cite{Stewart1998}. 
+
+
+%----------------------------------------------------------------------
+\section{Rayleigh Quotient Iteration}
+    Let $C$ be an $n$ x $n$ arbitrary complex matrix with spectrum $\{\lambda_{1}, \lambda_{2},...,\lambda_{r}\}$ and having eigenvectors normalized as shown below. If $\lambda_{i}$ is a multiple, then $\boldsymbol{x}_{i}$ and $\boldsymbol{y}_{i}$ will not be unique. If $C$ is defective then the $\{x_{i}\}$ will not span the whole space. When $C^{*} = C$ then $\boldsymbol{x}_{i} = \boldsymbol{y}_{i}$. 
+    
+    \begin{equation}
+       C\boldsymbol{x}_{i} = \lambda\boldsymbol{x}_{i}, \hspace{.2cm} \boldsymbol{y}^{*}_{i}C = \lambda_{i}\boldsymbol{y}^{*}, \hspace{.2cm} \boldsymbol{x}^{*}_{i}\boldsymbol{x}_{i} = \boldsymbol{y}^{*}_{i}\boldsymbol{y}_{i} = 1, \hspace{.4cm} i = 1,...,r
+    \end{equation}
+    
+    We define the Rayleigh Quotient, $\rho$, which assigns the following scalar quantity to any nonzero complex vector $u$:
+    
+    \begin{equation}
+       \rho(u) = \frac{u^{*}Cu}{u^{*}u} = \frac{\Sigma\Sigma c_{jk}\bar{u}_{j}u_{k}}{\Sigma \|u_{i}\|^{2}}
+    \end{equation}
+    
+    For all nonzero column vectors, $u$, $\rho(u)$ fills out a region that is closed, bounded, and convex. If $C$ is a normal matrix then $\rho$ is stationary at $u$ if and only if $u$ is an eigenvector of $C$ and $C^{*}$: 
+    
+    \begin{equation}
+       (C - \rho)u = 0, \hspace{.4cm} u^{*}(C - \rho) = 0^{*}
+    \end{equation}
+    
+   Additionally, given $u \ne 0$ then we have the minimal residual properties:
+   \begin{align*}
+      &||(C - \mu)u||^{2} \ge ||Cu||^{2} - ||\rho(u)u||^{2} \\
+      &||u^{*}(C - \mu)||^{2} \ge ||u^{*}C||^{2} - |\rho|^{2}||u^{*}||^{2}
+   \end{align*}
+   
+   Further, $u$ is orthogonal to $(C - \rho(u))u$ for any C. The Rayleigh Quotient Interation (RQI, see below) generates the Rayleigh sequence $\{\rho_{k}, v_{k}\}$. If $v_{k} \to \boldsymbol{x}_{1}$ as $k \to \infty$, then $\rho(v_{k}) \to \lambda_{1}$. It is important for our purposes to note that using the matrix $(C - \alpha)$ produces the sequence $\{\rho_{k} - \alpha, v_{k}\}$. The convergence rate is cubic for normal matrices. If RQI is started within a defined region around each eigenvector, the method will converge to that eigenvector. For the RQI choose a unit vector, $v_{0}$ and for $k = 1,2,...$  
+   \begin{align*}
+      (i)& \text{  form  } \rho_{k} = \rho(v_{k}) = v_{k}^{*}Cv_{k}, \\
+      (ii)& \text{  if  } C - \rho_{k} \text{  is singular, then solve  } (C - \rho_{k})v_{k+1} = 0 \text{  for  } v_{k+1} \ne 0 \text{  and halt. Otherwise, } \\
+      (iii)& \text{  solve  } (C - \rho_{k})w_{k+1} = v_{k}, \\
+      (iv)& \text{  normalize  } v_{k+1} = \frac{w_{k+1}}{||w_{k+1}||}. \\
+      (v)& \text{  } \tau_{k} = || (C - \rho_{k})^{-1}v_{k}||^{-1}.
+   \end{align*}
+   
+   For nonnormal matrices the stationary property is lost and the asymptotic convergence rate becomes quadratic at best. The norms of the residuals of a Rayleigh sequence are also no longer guaranteed to be monotonic decreasing so we cannot make assertions about global convergence properties. The method still converges in practice, just more slowly. Ostrowski has proposed methods to deal with some issues arising from using nonnormal matrices. A table is provided in (3) which details when to use which proposed method (3). 
+   
+%----------------------------------------------------------------------
+\section{Krylov + Evals + RQI}   
+
+\subsection{Spectral Transformation}
+Let $\lambda_{i}$ be the $i^{th}$ eigenvector of the matrix $A \in C^{n x n}$ with the corresponding eigenvector $x_{i}$. \\
+
+\noindent Let $p(\tau)  = \gamma_{0} + \gamma_{1}\tau + \gamma_{0}\tau^{2} + ... + \gamma_{k}\tau^{k}$. Then $p(\lambda)$ is an eigenvalue of  $p(A)$ with eigenvalue x. \\
+Let $r(\tau) = q(\tau)^{-1}p(\tau)$ where p and q are polynomials ($q(A)$ non singular). Then $r(\lambda)$ is an eigenvalue of $r(A)$ with eigenvector x.\\
+
+It is often possible to construct a polynomial or rational fuction, $\phi(t)$ such that $|\phi(\lambda_{i})| << |\phi(\lambda_{j})|$ for $ i \ne j$. In this case the eigenvalues of the transformed matrix $\phi(A)$ are transformed to $\phi(\lambda)$, but the eigenvectors remain the same. This means we perform a spectral transformation on a matrix while still finding the same eigenvectors.  (*Recall: Power Iteration converges like $|\frac{\phi(\lambda_{i})}{\phi(\lambda_{j})}|$ which is one reason this is important).
+
+If $\mu \notin \sigma(A)$ then $A - \mu I$ is invertible and $\sigma([A - \mu I]^{-1}) = \{ 1/(\lambda = \mu) : \lambda \in \sigma(A)\}$. The eigenvalues near the shift ($\mu$) become well separated from the others. Thus we can strategically choose $\mu$ to isolate the eigenvalues of interest without changing the corresponding eigenvectors. This is where RQI comes in. At each step we can change the shift (at the expense of a vector-matrix-vector multiply) on each iteration. Now we have an ideal shift **PERHAPS need another ref here...or mathm'l justification of why this works?**.
+
+\subsection{deriving a Krylov method}
+We impose a Galerkin condition on the Krylov subspace of interest, $\mathbf{K_{k}}$, and form Ritz pairs ($x \in \mathbf{K_{k}}(A, v_{1})$ is the Ritz vector and the corresponding Ritz value, $\theta$, satisfies $< w, Ax - x\theta > = 0 $ for all $w \in \mathbf{K_{k}}(A, v_{1})$). Let $W$ be an orthonormal basis for  $\mathbf{K_{k}}$ and $B \equiv W^{H}AW$. Then we can say (leaving out a bunch of info from the paper):\\
+
+\noindent $Ax - x\theta = \gamma \hat{p}(A)v_{1}$ where $\hat{p}(\lambda) \equiv det(\lambda I - B)$ is the characteristic polynomial of B and $\hat{p}(WBW^{H}) = 0$. $\gamma$ is a scalar.  \\
+\noindent $AWy - WBy = \gamma\hat{p}(A)v_{1}$ for any $y \in C^{k}$. \\
+
+Now we can say $V = WQ$ where $Q$ is a unitary matrix, $H = Q^{H}BQ$ is upper Hessenberg, and $v_{1} = Ve_{1}$. Using all of this we can show $AV = VH + f e^{T}_{k}$ where $f = \gamma\hat{p}(A)v_{1}$. We can say the Ritz values $\sigma(H) \subset \sigma(A)$ and corresponding Ritz vectors are eigenpairs for A. This is leads directly to the Arnoldi process. An alternate derivation is to truncate the reduction of A to Hessenberg form using shifted QR-iteration. 
+
+A k-step Arnoldi Factorization of A is:
+\begin{align*}
+AV_{k} &= V_{k}H_{k} + f_{k}e^{T}_{k} \\ 
+             &= (V_{k},v_{k+1})\binom{H_{k}}{\beta_{k}e_{k}^{T}} 
+\end{align*}
+
+\noindent where $\beta_{k} = ||f_{k}||$ and $v_{k+1} = frac{f_{k}}{\beta_{k}}$. Also, if $(x, \theta)$ is a Ritz pair, then $\theta = x^{H}Ax$, which is a Rayleigh Quotient when $x$ is a unit vector. We know the residual is $r(x) = Ax - x\theta$ and $||r(x)|| = |\beta_{k}e_{k}^{T}y|$, where $H_{k}y = h\theta$ and $x = V_{k}y$. Then we know when $f_{k} = 0$ the Ritz pairs are exact eigenpairs and when $f_{k}$ is small the residual is small.
+
+All this is used to produce the Arnoldi Algorithm where $V$ is an orthonormal basis for the Krylov subspace and $H$ is the orthogonal projection of $A$ onto this space. (6)
+ 
+ 
+%----------------------------------------------------------------------
+\section{Bibliography}
+(1) Templates for the Solution... \\
+(2) Sidje, Roger B. and William J. Stewart. A numerical study of large sparse matrix exponentials arising in Markov chains. Computational Statistics \& Data Analysis 29 (1999): 345-368. Electronic. \\
+(3) Parlett, B.N., Rayleigh ... \\
+(4) Van der Vorst, H.A. Bi-CGSTAB: ...\\
+(5) Baker... \\
+(6) Sorensen, Implicitly Restarted...\\
+(7) Warsa, Krylov Subspace...\\
+(8) Allen, J. The inverse power method...\\
+(9) Vidal, V. Variational Acceleration...\\
+(10) Verdu, G. The Implicit Restarted...\\
+(11) Stewart, G. W. Matrix Algorithims, Volume II... \\
+\end{document}

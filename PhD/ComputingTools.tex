@@ -1,0 +1,125 @@
+\documentclass[12pt,twoside]{article}
+\usepackage{amsmath}
+\date{\today}
+\title{Notes on Resources to be used in Research}
+\author{Rachel Slaybaugh}
+\begin{document}
+\maketitle
+
+This document contains general information about tools, resources, code concepts, etc. that I need to use and know about as I do my research. Most of this is pretty fundamental - nothing that will go in my thesis. This is just a place for me to record it all so I will be able to find it and refresh my memory in the future. 
+\section{Trilinos}
+A document about Trilinos that can be a good high-level reference is ``TrilionsOverview.pdf''. See my writeup ``SolverPackages.pdf'' for my fall'09 summary of Trilinos and PetSc (the PetSc version is more complete). The website also has lots of good information. 
+\subsection{Epetra}
+``Core linear algebra package. Facilitates construction and manipulation of distributed and serial graphs, sparse and dense matrices, vectors and multivectors.'' and ``Provides wrappers for select BLAS and LAPACK routines.'' We make Epetra vectors in Denovo and use the BLAS and LAPACK interface. 
+
+\subsection{AztecOO}
+AztecOO serves as both an ``ILU-type preconditioner'' and a ``preconditioned Krylov solver package. Supercedes Aztec 2.1. Solves linear systems of equations via preconditioned Krylov methods. Uses Epetra objects, compatible with IFPACK, ML and Aztec.'' Also note that ``any future enhancements to the Aztec package will be available only through the AztecOO interfaces.''
+
+The documentation can be found in ``AztecOOUserGuide.pdf.'' Aztec is written in C and is procedure oriented while AztecOO is written in C++ and is object oriented. Aztec preconditioners and solvers can be used through the Aztec ``matrix-free'' interface using Epetra. New functionality provided by AztecOO: extensible status testing capability, mechanisms for using lfpack and ML, and it has preconditioners as well. 
+
+\subsection{BLAS and LAPACK}
+Website with documentation: http://www.netlib.org/lapack/lug/lapack\_lug.html and a book describing everything in detail: \emph{LAPACK Users' Guide, Third Edition} (SIAM, 1999)
+
+BLAS (Basic Linear Algebra Subprograms) are routines that provide standard building blocks for performing basic vector and matrix operations. The various levels (in increasing order) perform vector operations, matrix and vector operations, matrix and matrix operations, and sparse vector operations. This website: http://www.netlib.org/blas/faq.html\#3 has a listing of publications where more information about BLAS can be found. 
+
+``LAPACK (Linear Algebra PACKage) is written in Fortran90 and provides routines for solving systems of simultaneous linear equations, least-squares solutions of linear systems of equations, eigenvalue problems, and singular value problems. The associated matrix factorizations (LU, Cholesky, QR, SVD, Schur, generalized Schur) are also provided, as are related computations such as reordering of the Schur factorizations and estimating condition numbers. Dense and banded matrices are handled, but not general sparse matrices. In all areas, similar functionality is provided for real and complex matrices, in both single and double precision.'' The goal of LAPACK was to do the same things as EISPACK and LINPACK, but to do it much more efficiently for shared-memory vector and parallel processors. The computations are performed by calling BLAS as much as possible. 
+
+Within LAPACK, \textbf{driver routines} are for solving standard types of problems, \textbf{computational routines} are for doing distinct computational tasks, and \textbf{auxiliary routines} are used to do subtasks and low-level computation. 
+
+\subsection{other packages}
+For PetSc see ``SolverPackages.pdf'', it is pretty thorough. 
+
+%---------------------------------------------------------------
+
+\section{C++ stuff}
+The last few pages of TrilinosOverview.pdf gives some general information about object oriented programming that is a good quick-reference for concepts. 
+\subsection{Reference and Pointers}
+To pass something by value: ``func(type1 arg1, type2 arg2)'' passes a copy of arg1 and arg2 into the function. Any modifications done within the function are done to the copies rather than the original variables - thus arg1 and arg2 will remain unchanged within the calling routine. 
+
+To pass by reference: ``func(type1 \&args, type2 \&arg2)'' passes a reference to arg1 and arg2 into the function. Any modifications done within the function are done to the original variables - thus arg1 and arg2 will change in the outside calling routine as well. 
+
+\begin{itemize}
+   \item \&: reference operator, this gives the address in memory of a variable. 
+   \item *: pointer indicator, this stores the memory address. \\
+``int *p'' creates a pointer to an integer. \\
+If p is a pointer, ``std::cout $<<$ *p'' prints the contents of p because * is used as a dereferencing operator.
+   \item $->$: dereference operator for a function. This says go to the member function associated with the type the pointer points to. The following are equivalent: \\
+   ``str.size( ) = p\_str $->$ size( ) = (*p\_str).size( )''
+   \item You can have const pointers and (separately or in combination) pointers can point to const data.
+\end{itemize}
+
+\subsection{Templates}
+    The template is a generic type we can use in our program to add flexibility. Both functions and classes can be templated: 
+    
+``template $<$class Tname$>$
+
+   class or function definition''\\
+For functions you use Tname where you would normally put a specific type. The function will then work with whatever type you call it with:  ``var = function$<$type$>$(args)''. This means you can write one function that can take different types for the same arguments. You control the behavior depending on how you call it. Templated classes are similar. They have the ability to have members that use template parameters as types. For more info see: \\
+    http://www.cplusplus.com/doc/tutorial/templates/.
+
+\subsection{Typedef}
+     Typedef is used to give a data type a new name - usually done for code clarity. This can be used to relate a variable to a concept, to shorten names that are really long, or to avoid possible errors when defining pointers. Another benefit is that this may reduce the amount of work required to change a typedef'd variable's type. Example for relating concepts:\\
+* instead of:
+
+type variable; 
+
+variable = value;\\
+* you can do: 
+
+typedef type Concept; (typedef int Apple;)
+
+Concept variable = value; (Apple numSeeds = 5;)\\
+Now we know that numSeeds goes with Apple. This can also be applied to user-defined types. You can create pointers:
+
+typedef type *typePtr;
+
+typePtr ptr1, ptr2, ptr3, ... \\
+Now everything in the list will be a pointer to the specified type. You won't have to worry if you forgot a * somewhere in a long list or something like that. 
+
+\subsection{Iterators}
+An iterator is any object that, pointing to some element in a range of elements, has the ability to iterate through the elements using a set of operators. Pointers are iterators. Each standard template library (STL) container (a holder object that stores other objects - like vectors, lists, queues, etc.) has an iterator type. 
+
+There are five types of iterators: (in order of increasing functionality) input, output, forward, bidirectional, and random access. All STL containers have at least bidirectional iterators. Random access iterators can move around non-sequentially in the range (pointers have this ability). Best illustrated by an example: \\
+vector$<$int$>$ vec; \\
+vector$<$int$>$::iterator vecItr; \\
+for (int i = 0; i $<$ 10; i++) vec.push\_back(i);\\
+int total = 0; \\
+vecItr = vec.begin( ); \\
+while(vecItr != vec.end( )) \{ \\
+total += *vecItr; \\
+++vecItr; \\
+\}
+
+\subsection{Virtual functions}
+Virtual functions exist to remove ambiguity when base and derived classes have functions of the same name. Consider: A base class has a function, funcName. There are several classes derived from this base class and they each have a function called funcName that does something slightly different. If we declare ``virtual type funcName'' in the base class, then calls to funcName through derived classes will use the derived class version of the function. If we call through the base class then we will get the base class behavior. If we did not use the word ``virtual'' before the function definition then all calls to funcName would use the base class version. 
+
+You can make pure virtual functions in abstract classes. An abstract class is sort of like a builder class - it defines some set of functionality from which other classes are derived, but is not itself ever instantiated. That it, an abstract class is not designed to exist itself. Virtual functions in abstract classes can never actually be called, so they are purely virtual. 
+
+We also need to make sure that destructors in the base class are declared to be virtual. That way when we destroy a derived class we ensure it is properly destructed. 
+
+%---------------------------------------------------------------
+
+\section{Python stuff}
+
+
+%---------------------------------------------------------------
+
+\section{Random}
+Not big enough for a new section, and without another real home. 
+\subsection{Design By Contract}
+    Design by Contract (DbC) is a software design tool that helps ensure that each piece of code gets what it needs from other code pieces and that it returns and maintains  what it is supposed to. This can be thought of as pieces of software that each have obligations and receive benefits (this idea is based on the business concept of contracts). DbC is a way to force the code to meet the conditions necessary to run properly. Questions addressed by DbC for a given routine: what does it expect? what does it guarantee? what does it maintain? 
+    
+    The contract for each method will normally contain the following pieces of information:
+\begin{itemize}
+   \item Acceptable and unacceptable input values or types, and their meanings
+   \item Return values or types, and their meanings
+   \item Error and exception conditions values or types, that can occur, and their meanings
+   \item Side effects
+   \item Preconditions
+   \item Postconditions
+   \item Invariants
+\end{itemize}
+
+C++ supports this through the third party DBC. Denovo uses DBC and the level of rigor (you can vary how strictly the conditions must be met) can be changed with compiler flags. DBC can cause a big hit for execution time - but is a great debugging tool and safety net. Further, including it as you program may help you write better code as you are always keeping in mind what ``contracts'' your code must fulfill. 
+
+\end{document}

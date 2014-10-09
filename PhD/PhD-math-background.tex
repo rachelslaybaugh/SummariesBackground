@@ -1,0 +1,555 @@
+\documentclass[12pt,twoside]{book}
+\usepackage[letterpaper, textwidth=6.5in, textheight=9in]{geometry}
+\usepackage{amsmath}
+\date{\today}
+\newcommand{\ve}[1]{\ensuremath{\mathbf{#1}}}
+\newcommand{\evec}{eigenvector}
+\newcommand{\eval}{eigenvalue}
+\newcommand{\epair}{eigenpair}
+\title{Methods Notes}
+\author{Rachel Slaybaugh}
+\begin{document}
+%-----------------------------------------------
+\maketitle
+
+\section{Basic Math Background}
+
+\emph{Collocation method}: soution method for ODEs, PDEs, and integral equations. Choose a finite-dimensional space of candidate solutions, such as polynomials up to a certain degree, and a number of points within the domain, called collocation points. Select the solution which satisfies the equation at those points within that space. The $S_{N}$ approximation is a collocation method in angle. The collocation points are the discrete angles and the solution space is typically selected to be a quadrature rule (I think) (Wikipedia). \\ 
+
+\emph{weak form}: Rewrite a differential equation such that the equation does not contain any derivatives of the solution. You can then find solutions which are actually not differentiable. Derivatives in the original equation may not all exist, but nevertheless satisfy the equation in some specifically defined way. We rewrite the transport equation in the weak form to derive finite element spatial differencing schemes (Wikipedia). \\
+
+\emph{Hilbert Space}: A generalization of the idea of Euclidean space by extending methods of vector algebra and calculus to spaces with any finite (or infinite) number of dimensions. Hilbert spaces must have an inner product that allows measurement of length and angle. They must also be complete such that enough limits exist to allow calculus to be used. Examples include spaces of sequences, square-integrable functions, etc. Of note: perpendicular projections onto a subspace is used in optimization; linear operations can be thought of as transformations that stretch the space by different factors in mutually perpendicular directions (Wikipedia). \\ 
+
+\emph{Galerkin Methods}: Converts a continuous problem to a discrete problem - equivalent to converting the equation to a weak formulation. Typically one gives some constraints on the function space to characterize the space with a finite set of basis functions. Examples include: finite element method, boundary element method, Petrov-Galerkin method, Krylov subspace methods. We use Galerkin methods in multiple places in Denovo. 
+%
+\begin{enumerate}
+   \item Pose the weak formulation on a Hilbert space, $V$: find $u \in V$ such that for all $v \in V$ we have $a(u,v) = f(v)$. 
+   \item Choose a Galerkin discretization. Pick an n-dimensional subspace $V_{n} \subset V$ and project the problem onto it: find $u_{n} \in V_{n}$ such that for all $v_{n} \in V_{n}$ we have $a(u_{n},v_{n}) = f(v_{n})$. This is the Galerkin Equation. We use a Krylov subspace.
+   \item The error is orthogonal to the subspace. We can use $v_{n}$ as a test vector. Then $e_{n} = u - u_{n}$. See that $a(e_{n},v_{n}) = a(u,v_{n}) - a(u_{n},v_{n}) = f(v_{n}) - f(v_{n}) = 0$.
+   \item Matrix form: let $v_{1}, v_{2}, ..., v_{n}$ be a basis for $V_{n}$. We still use some $v_{i}$ as a test vector when looking for $u_{n}$. We can write $u_{n} = \sum_{j=1}^{n}u_{j}v_{j}$ and then find that $a( \sum_{j=1}^{n} u_{j}e_{j}, e_{j} ) = \sum_{j=1}^{n} u_{j}a(e_{j}, e_{i}) = f(e_{i})$.
+\end{enumerate} 
+
+$http://en.wikipedia.org/wiki/Galerkin\_method$ \\
+
+\emph{Ritz pair}:
+A Ritz pair...See pgs. 280 from (11).
+
+The Ritz Method is a finite element method used to compute eigenvectors and eigenvalues of a Hamiltonian system (Wikipedia). More information is contained in my Numerical Treatment of PDEs textbook - this is a discretization method to solve the variational form of a differential equation. I don't think I really need to know about this. \\
+
+\emph{Schur decomposition}: The Schur decompotion of $A$ of order $n$ can be written as $A = UTU^*$, where $U$ is a unitary matrix and $T$ is upper triangular. The eigenvalues of $A$ are the diagonal elements of $T$. The columnds of $U$ are called Schur vectors. They can be related to the eigenvectors contained in a matrix $X$ (where $X^{-1}AX = \Lambda$) by letting $X = UR$ be the QR decomposition of $X$. Then we see $U^*AU = R\Lambda R^{-1}$. This means the Schur vectors are the columns of the Q-factor fo the matrix of eigenvectors (in the correct order). (11) \\
+
+\emph{Hamiltonian system}:
+A system of differential equations which can be written in the form of Hamilton's equations: a different way of formulating physics equations (as compared to Lagrangian formulation). They are physical systems in which forces are momentum invariant. This is very physics-y and I don't think I really need to learn about it here (Wikipedia).\\
+
+\emph{deflation}: If you know one eigenpair, you can use a deflation technique to reduce the size of the eigenvalue problem by removing the known eigenpair (11). \\
+
+\emph{Limit point} Let $S$ be a subset of a topological space $X$. A point $x$ in $X$ is a limit point of $S$ if every open set containing $x$ contains at least one point of $S$ different from $x$ itself. [wikipedia, 9/16/11, http://en.wikipedia.org/wiki/Limit\_point] \\
+
+\emph{Topological Space} A topological space is a set $X$ together with $\tau$ (a collection of subsets of $X$) satisfying the following axioms:
+\begin{itemize}
+   \item The empty set and $X$ are in $\tau$.
+   \item $\tau$ is closed under arbitrary union.
+   \item $\tau$ is closed under finite intersection.
+\end{itemize}
+The collection $\tau$ is called a topology on $X$. The elements of $X$ are usually called points, though they can be any mathematical objects. A topological space in which the points are functions is called a function space. The sets in $\tau$ are called the open sets, and their complements in $X$ are called closed sets.  [wikipedia, 9/16/11, http://en.wikipedia.org/wiki/Topological\_space]
+
+%-----------------------------------------------
+\section{Transport Equation}
+
+\emph{Transport Unknowns}: The $S_{N}$ approximation has $n = N(N + 2)$ unknowns, which are the number of angles. For Legendre expansion of the scattering term into spherical harmonics ($P_{N}$ order), there are $t = (N + 2)^{2}$ unknowns, which are the angular flux moments. There are also $N_{g}$ energy groups, $N_{c}$ cells, and $N_{e}$ unknowns per cell (determined by the spatial differencing scheme). This gives altogether:
+%
+\begin{align*}
+a &= N_{g} \text{ x }n\text{ x }N_{c}\text{ x }N_{e} \\
+f &= N_{g}\text{ x }t\text{ x }N_{c}\text{ x }N_{e}
+\end{align*}
+
+\emph{Operator Form}:
+In the most basic form we can write $\mathbf{L}\psi = s$ where $\mathbf{L} = \mathbf{\hat{\Omega}} \cdot \nabla + \sigma$ is the transport operator. The basic solution involves inverting $\mathbf{L}$, which can be formed implicitly as a lower-left triangular matrix and inverted by ``sweeping'' through the mesh in the direction of particle flow. The operation $\mathbf{L}^{-1}$ is referred to as a sweep. 
+
+More generally we write $\mathbf{L}\psi = \mathbf{MS}\phi + q_{e}$. For each group $[\phi]_{g}$ has $n$ entries. $\mathbf{M}$ is moment-to-discrete and is a matrix of spherical harmonics. $\mathbf{S}$ is the scattering cross sections and is made up of blocks of diagonal matrices. The lower triangluar part is downscattering, the diagonal of blocks is within group, and the upper triangular part is upscattering. Finally, $[\phi]_{g}$ has $t$ enteries per spatial unknown for each group. 
+
+We also have that $\phi = \mathbf{D}\psi$ where $\mathbf{D} = \mathbf{M}^{T}\mathbf{W}$ and $\mathbf{W}$ is an $n$ x $n$ diagonal matrix of quadrature weights. If we use Galerkin quadrature then $\mathbf{D} = \mathbf{M}^{-1}$. When we multiply our matrices together we get a series of coupled single-group equations
+
+\begin{align}
+   \mathbf{L}[\psi]_{0} &= [\mathbf{M}]([S]_{00}[\phi]_{0} + [S]_{01}[\phi]_{1} + \hdots + [S]_{0G}[\phi]_{G}) + [\mathbf{M}][q_{e}]_{0}, \nonumber \\
+   \mathbf{L}[\psi]_{1} &= [\mathbf{M}]([S]_{10}[\phi]_{0} + [S]_{11}[\phi]_{1} + \hdots + [S]_{1G}[\phi]_{G}) + [\mathbf{M}][q_{e}]_{1}, \nonumber \\
+   &\vdots \\
+   \mathbf{L}[\psi]_{G} &= [\mathbf{M}]([S]_{G0}[\phi]_{0} + [S]_{G1}[\phi]_{1} + \hdots + [S]_{GG}[\phi]_{G}) + [\mathbf{M}][q_{e}]_{G}, \nonumber \\
+\end{align}
+
+When there is no upscatter then the coupled equations can be solved with $N_{g}$ single group solves using forward-substitution. When upscatter is important $\mathbf{S}$ becomes semi-dense and Denovo solves the downscattering (lower-left) portion using forward-sub and the upscattering (upper-right block over $[g1,g2]$) with Gauss-Seidel (GS) iteration
+
+\begin{equation}
+   \mathbf{L}\psi^{k+1}_{g} = \mathbf{MS}_{gg}\phi^{k+1}_{g} + (\mathbf{M}\sum_{g'=g1}^{g-1}\mathbf{S}_{gg'}\phi^{k+1}_{g'} + \mathbf{M}\sum_{g'=g+1}^{g2}\mathbf{S}_{gg'}\phi^{k}_{g'} + q_{eg}).
+\end{equation}
+
+\noindent Or, where $\phi^{it}$ is the flux on which we are iterating and $\phi^{new}$ is the flux that has already been updated through the downcatter solve
+
+\begin{equation}
+  \phi^{it} =  \mathbf{DL^{-1}MS_U}\phi^{it} + (\mathbf{DL^{-1}MS_D}\phi^{new} + \mathbf{DL^{-1}MS_L}\phi^{new} + \mathbf{DL^{-1}}q_e)
+\end{equation}.
+
+This is unconditionally stable, but can be slow. It is solved using power iteration (see below). There is a two-grid acceleration method available (TTG). Details of this omitted here, but are contained in section III.A of \emph{Denovo - A New Three-Dimensional...}.\\
+
+The new upscatter krylov solver approaches upscattering slightly differently. The downscatter only groups (i.e. group 1 through g1 where g1+1 has upscattering) are still solved using forward substitution. The remainder of the scatter block is handed to the upscatter krylov solver. This now solves
+
+\begin{equation}
+  \phi^{it} = \mathbf{DL^{-1}MS_{lft}}\phi^{it} + (\mathbf{DL^{-1}MS_{rt}}\phi^{new} +  \mathbf{DL^{-1}}q_e)
+\end{equation}.
+
+\noindent Here $\mathbf{S_{lft}}$ is the $(g1+1\text{ to }G)$ x $(g1+1\text{ to }G)$ block of the scattering matrix and $\mathbf{S_{rt}}$ is the $(0 to g1) x (g1+1 to G)$ block of the scattering matrix. This approach decouples the energy groups (this is like changing to a Jacobi finite difference method). Now, the entire iteration block can be handed to a krylov solver and each energy group can be solved simultaneously. This adds another dimension of parallelization. 
+
+\emph{Spatial differencing}:
+\begin{itemize}
+   \item Weighted Diamond Difference (WDD) is equivalent to a Crank-Nicolson method.
+   \item Theta Weighted Diamond Difference (TWD) is a nonlinear method as is WDD with zero Flux-Fixup (WDD-FF). 
+   \item Linear-Discontinuous (LD) is a Galerkin method formed from the basis set $\{1,x,y,z\}$. 
+   \item Trilinear-Discontinuous (TLD) is a Galerkin method formed from the basis set $\{1,x,y,z,xy,yz,xz,xyz\}$ and maintains the asymptotic diffusion limit on the grid used in Denovo.
+   \item Step Characteristic (SC) does not produce negative fluxes and does not have oscillatory behavior. All the other methods are second order while this one is only first. 
+\end{itemize}
+
+
+
+%--------------------------------------------------------------------------------------------------------------------------------------------------
+\section{Power Iteration}
+
+Power iteration can be viewed as a Krylov method with a subspace of 1. If we write the transport equation as:
+
+\begin{equation}
+  \mathbf{D^{-1}L}\phi = \mathbf{MS}\phi + \frac{1}{k}\mathbf{F}\phi \text{ ,}
+\end{equation}
+
+then we can write $\mathbf{A }= \mathbf{D(L - MSD)^{-1}F}$. We can now define power iteration as
+
+\begin{align}
+  \phi^{(l+1)} &= \frac{1}{k}\mathbf{A}\phi^{(l)}  \\
+  &\text{ OR} \nonumber \\
+  k^{(l+1)} &= k^{(l)}\frac{||\phi^{(l+1)}||}{||\phi^{(l)}||} \text{ .}
+\end{align}
+
+We could alternatively use the Rayleigh Quotient which usually improves efficiency because it provides a better estimate of the eigenvalue earlier in the iterative process. Here $(\dot,\dot)$ denotes a discrete inner product over all cells:
+
+\begin{equation}
+  k^{(l+1)} = \frac{(\mathbf{A}\phi^{(l)}, \phi^{(l)})}{(\phi^{(l)}, \phi^{(l)})} \text{ .}
+\end{equation}
+
+The convergence rate of Power iteration is determined by the dominance ratio, $\delta = \frac{|\lambda_{2}|}{|\lambda_{1}|}$. Classically this has been accelerated using Chebyshev iterative techniques or Successive Over Relaxation. They use a linear combination of a small number of previous iterates to update the scalar flux (7).\\
+
+\emph{k eigenvalue}\\
+An eigenvalue equation can be written as $\mathbf{A} \phi^{i} =  \mathbf{B} \phi^{i-1}$ where $\mathbf{A}$ is is the trasnport-interaction matrix and $\mathbf{B}$ is the fission matrix. In this case k, the multiplication factor, can be thought of as a ratio between the numbers of neutrons in successive generations. As $i$ increases, $\phi^{i}/\phi^{i-1}$ approaches $k$. This is identical to the power iteration method where we write $\phi^{i} = \mathbf{C}\phi^{i-1}$ and the ratio $||\phi^{i}||/||\phi^{i-1}||$ approaches $\lambda_{1}$ (the dominant eigenvalue of $\mathbf{C}$ where $\mathbf{C}$ = $\mathbf{A_{-1}B}$ (8). 
+
+We can interpret $k$ as the multiplication factor of a reactor and the remaining eigenvalues (that are real and positive) can express subcritical modes of a reactor configuration. This can give information about regional instabilities using modal analysis (10). Any negative eigenvalues have no physical meaning and are a result of spatial discretization (9).  
+
+\emph{inverse power iteration}\\
+If there is a good estimate, $\gamma$, for the dominant eigenvalue, $\lambda_{1} = k$ then we can take advantage of this by using inverse power iteration. 
+\begin{equation}
+  \phi^{i} = (-\mathbf{C} + \gamma\mathbf{I})^{-1} \phi^{i-1} \text{   for } i \text{ = 1, 2,...}
+\end{equation}  
+
+This means $|\lambda_{1} - \gamma| < |\lambda_{j} - \gamma| \le |\lambda_{i} - \gamma|$ for $i$ = 2, 3, ..., N. $\lambda_{j}$ is the second closest to $\gamma$ in magnitude. When $\gamma$ is close to $\lambda_{1}$ then the rate of convergence can be much faster than the regular power method (8). 
+
+%--------------------------------------------------------------------------------------------------------------------------------------------------
+\section{Conditioning and Convergence issues with Inverse Iteration}
+
+\subsection{Condition Number}
+A \emph{well-conditioned} problem is one with the property that all small perturbations of $x$ lead to only small changes in $f(x)$. An \emph{ill-conditioned} problem is one with the property that some small perturbation of $x$ leads to a large change in $f(x)$. Large and small mean different things in different contexts. 
+
+$\delta x$ is a small perturbation of $x$, which causes $\delta f = f(x + \delta x) - f(x)$. The absolute condition number, $\hat{\kappa} = \hat{\kappa}(x)$ of $f$ at $x$ is
+%
+\begin{equation}
+  \hat{\kappa} = \lim_{\delta \rightarrow 0} \sup_{||\delta x|| \le \delta} \frac{||\delta f||}{||\delta x||} \:.
+\end{equation}
+%
+Note: supremum is defined as the smallest real number that is greater than or equal to every number in the set in question [wikipedia, June 14, 2011]. If the $\delta$s are infinitessimal and $f$ is differentiable, then we can rewrite this in terms of the Jacobian. To first order $\delta f \approx J(x) \delta x$, then
+%
+\begin{equation}
+  \hat{\kappa} = ||J(x)|| \:.
+\end{equation}
+
+The relative condition number, $\kappa = \kappa(x)$ is 
+%
+\begin{align}
+  \kappa &= \lim_{\delta \rightarrow 0} \sup_{||\delta x|| \le \delta} \biggl(\frac{||\delta f||}{||f(x)||} / \frac{||\delta x||}{||x||} \biggr)  \:, \\
+  \kappa &= \frac{||J(x)||}{||f(x)|| / ||x||} \:.
+\end{align}
+We usually care about the relative condition number because floating point arithmetic introduces relative errors. A small condition number corresponds to well-conditioned problems, and vice versa.
+
+For a matrix, 
+\begin{align}
+  \kappa &= \sup_{\delta x} \biggl(\frac{||A(x + \delta x) - Ax||}{||Ax||} / \frac{||\delta x||}{||x||} \biggr) \:, \\
+  &= sum_{\delta x} \frac{||A \delta x||}{||\delta x||} / \frac{||Ax||}{||x||} \:, \\
+  \kappa &= ||A||\frac{||x||}{||Ax||} \:.
+\end{align}
+%
+If $A$ is square and non-symmetric, then $||x||/||Ax|| \le ||A^{-1}||$. This gives
+%
+\begin{equation}
+  \kappa \le ||A|| \text{ }||A^{-1}|| \:.
+\end{equation}
+%
+Note also that we can replace the denominator with $b$ since $Ax = b$: $\kappa = ||A|| \frac{||x||}{||b||} \le ||A||\text{ } ||A^{-1}||$. We can also consider the case of a fixed solution and a changed right hand side. In this case we simply replace $||A||$ with $||A^{-1}||$, giving $\kappa = ||A^{-1}|| \frac{||b||}{||x||} \le ||A|| \text{ }||A^{-1}||$. If the two norm is used, in each case equality holds when $x$ is a multiple of the right singular vector of $A$ corresponding to the minimal singular value $\sigma_{m}$ and when $b$ is a multiple of the left singular vector of $A$ corresponding to the maximal singular value, $\sigma_{1}$.
+
+The condition number of $A$, as opposed to the condition number of the problem instance (when we have also a $b$ and an $x$ in mind) is
+\begin{equation}
+  \kappa(A) = ||A|| \text{ }||A^{1-}|| \:.
+\end{equation}
+%
+If $A$ is singular, its condition number is infinity. If the two-norm is used, then $||A|| = \sigma_{1}$ and $||A^{-1}|| = \sigma_{m}$ and $\kappa(A) = \frac{\sigma_{1}}{\sigma_{m}}$. The ratio $\frac{\sigma_{1}}{\sigma_{m}}$ can be interpreted as the eccentricity of the hyperellipse that is the image of the unit sphere of $\mathcal{C}^{m}$ under $A$.
+
+What about when we perturb $A$? For a fixed $b$, this will cause $x$ to change by an infinitesimal amount. The new system becomes
+%
+\begin{equation}
+  (A + \delta A)(x + \delta x) = b \:.
+\end{equation}
+%
+If we recognize $Ax = b$ and drop the $(\delta A)(\delta x)$ term we get $\delta x = -A^{-1}(\delta A) x$, which implies $||\delta x|| \le ||A^{-1}||\text{ } ||\delta A|| \text{ }||x||$.
+\begin{equation}
+  \frac{||\delta x||}{||x||} / \frac{||\delta A||}{||A||} \le ||A^{-1}|| \text{ }||A|| = \kappa(A) \:.
+\end{equation}
+%
+Equality holds when $||A^{-1}(\delta A) x|| = ||A^{-1}|| \text{ }||\delta A||\text{ } ||x||$. 
+
+This means \emph{the condition number of} $x=A^{-1}b$ \emph{with respect to perturbations to} $A$ \emph{is the condition number of} $A$. [trefethen and bau chapter 12].
+
+\subsection{Backward Stability}
+An algorithm $\tilde{f}$ for a problem $f$ is backwards stable if, for each $x \in X$,
+%
+\begin{equation}
+  \tilde{f}(x) = f(\tilde{x}) \qquad \text{for some } \tilde{x} \text{ with } \frac{||\tilde{x} - x||}{||x||} = O(\epsilon _{machine}) \:.
+\end{equation}
+%
+This means that a backwards-stable algorithm will give the right answer to nearly the right question. [T and B pg. 104].
+
+For a backwards stable algorithm, the accuracy depends on the condition number, $\kappa(x)$ of $f$. The relative errors satisfy [T and B pg. 110]:
+%
+\begin{equation}
+  \frac{||\tilde{f}(x) - f(x)||}{||f(x)||} = O(\kappa(x) \epsilon _{machine}) \:.
+\end{equation}
+%
+
+
+%--------------------------------------------------------------------------------------------------------------------------------------------------
+\section{Nonstationary Iterative Methods}
+
+Nonstationary iterative methods have information that changes at each iteration. Constants are typically computed by taking inner products of residuals from the methods (1). This section will briefly cover many such methods and then go into detail of GMRES and Bi-CGSTAB.
+
+\subsection{Methods Summary}
+\begin{enumerate}
+   \item Conjugate Gradient (CG):\\
+    CG is effective for symmetric positive definite (SPD) matrices. It generates vector sequences of iterates, $x(i)$. Each iterate is an element of $x(0) + span\{r(0),...,A^{i-1}r(0)\}$ such that $(x(i)-\hat{x})^TA(x(i)-\hat{x})$ is minimized. Here $\hat{x}$ is the exact solution. The preconditioned version uses a different subspace but satisfies the same minimization properties. CG also generates residuals, $r(i)$, and search directions, $p(i)$, for each iterate. The search directions are used for updating the iterates and residuals. The $p(i)$ and $r(i)$ are orthogonal to all previous $Ap(j)$ and $r(j)$, respectively. 
+
+    The speed of convergence depends upon the condition number of $A$. Two inner products are performed every iteration and they act as a synchronization point in a parallel environment. Parallel properties are largely independent of the coefficient matrix, but depend strongly on the structure of the preconditioner (1). 
+%
+   \item MINRES and SYMMLQ: \\
+    These methods are variants of CG that can be applied to symmetric indefinite systems. These do not use LU-factorization and thus avoid the breakdowns CG suffers with indefinite matrices. MINRES minimizes the residual in the 2-norm. They are both variations of the Lanczos method (as is CG).
+%
+   \item Krylov Methods: \\
+    The fundamental idea behind Krylov methods is that all polynomial approximations of degree $m$ can be formed from the Krylov subspace of dimension $m+1$: $K_{m+1}  =span\{x_0, Ax_0, A^2x_0,..., A^mx_0\}$ for an $n$ x $n$ matrix $A$ with starting vector $x_{0}$. The vectors in a Krylov subspace tend to become nearly linearly dependent very quickly so an orthogonalization scheme is used. The Lanczos method can be used for symmetric problems and the Arnoldi process can be used for nonnormal matrices. A big focus of this method is that it can solve $Ax-b$ when $A$ is not SPD.
+   
+	In the Arnoldi process $Q_{m} = [q_{1}, q_{2},..., q_{m}]$ is an orthonormal basis for $K_{m}$ that is built using a Gram-Schmidt type procedure. At the same time an upper Hessenberg matrix, $H_{m}$, is constructed. The entries on and above the diagonal of $H_{m}$ are like the Gram-Schmidt coefficients. The whole process is essentially a partial factorization of A: $AQ_{m} = Q_{m}H_{m} + h_{m+1,m}q_{m}e_{m}$ where $h_{m+1,m}$ is the $(m+1,m)^{th}$ entry of $H_{m}$ and $e_{m}$ is the $m^{th}$ column of the $m$ x $m$ identity matrix (2). 
+%
+   \item Generalized Minimum Residual (GMRES): \\
+    GMRES is an extension of MINRES for unsymmetric systems and uses a Krylov space from which it generates orthonormal vectors using a Gram-Schmidt type procedure to get vectors for making $H_{m}$ and $Q_{m}$. The fundamental idea for GMRES is to use a least squares approximation to minimize the residual norm of the problem in question: $||b - Ax_{i}||$. The Gram-Schmidt orthogonalization has good parallelization properties(1,2).
+   
+    GMRES without restart is guaranteed to converge within n steps (using exact arithmetic) and it provides the smallest residual for a fixed number of steps. However, much storage is required for non-restarted GMRES and the number of inner products required grows linearly with iteration count. Another approach is to use GMRES(m), which is restarted every m iterations. This only requires the storage of m vectors, but there is no guarantee of convergence. An additional trouble is that what constitutes a ``good'' value of m is problem dependent (1). 
+%
+   \item BiConjugate Gradient (BiCG): \\
+    This method uses two mutually orthogonal sequences instead of one and no longer provides minimization. One residual uses $A$ and the other uses $A^{T}$. This is suitable for nonsymmetric systems and does not have the storage problems of GMRES.  There is little known about theoretical convergence. When the norm of the residual is reducing quickly it is comparable to GMRES. Unfortunately the convergence may be quite irregular in general and could breakdown (though there are look-ahead strategies to help deal with this). 
+   
+    BiCG requires $Ap_{k}$ and $A^{T}p_{k}$, which can be performed simultaneously in parallel. The accuracy is typically close to GMRES, but there are twice as many matrix vector products per step. However, the memory concerns with GMRES are mitigated. Also note that because $A^{T}$ is required this cannot be used if $A$ is never explicitly formed (1). 
+%
+   \item Conjugate Gradient Squared (CGS): \\
+    For BiCG we can think of forming the residual as $r_{i} = P_{i}(A)r_{0}$ where $P_{i}$ is an ith degree polynomial that ideally reduces $r_{0}$. The idea behind CGS is to apply $P_{i}$ twice to enhance the contraction of the residual, computing $P^{2}_{i}(A)r_{0}$. Often this converges (and diverges) twice as fast as BiCG, but there is no theoretical reason for this to be true. The irregularity of the convergence is often pretty bad and can lead to a loss in accuracy in the updated residual. CGS tends to diverge if the starting guess is close to the solution. It requires about the same number of operations per iteration as BiCG. CGS does not require $A^{T}$ so can be used even when $A$ is not explicitly formed. There are more synchronization points in a parallel environment because the two matrix-vector products are not independent (1).
+%
+   \item BiConjugate Gradient Stabilized (Bi-CGSTAB): \\
+    Bi-CGSTAB is designed to solve nonsymmetric linear systems, but avoid the irregular convergence of CGS. Instead of using $P_{i}^{2}$ this method computes $r_{i} = Q_{i}(A)P_{i}(A)r_{0}$ where $Q_{i}$ is an ith degree polynomial describing a steepest descent update. The convergence speed is comparable to CGS, but without so much irregularity. This also reduces loss of accuracy concerns. It requires two matrix-vector products and four inner products, so computational costs are similar to BiCG and CGS. $A^{T}$ is not required.
+
+    This method can be interpreted as a product of BiCG and repeatedly applied GMRES(1). The residual is locally minimized and this gives the smoother convergence behavior. However, if the local GMRES(1) stagnates (**what does this mean?**) then Bi-CGSTAB will break down. Bi-CGSTAB can also suffer from the same breakdowns as BiCG. However, this can be avoided by combining BiCG with other methods (1). 
+
+\end{enumerate}
+
+%----------------------------------------------------------------------
+\subsection{Bi-CGSTAB}
+    This method was developed by Van der Vorst in the early 1990s to address issues associated with Bi-CG and CGS. The fundamental idea derives from these methods where we know that $(P_{i}(A)r_{0},P_{j}(A^{T})\hat{r}_{0}) = 0$ for j less than i. This means that $P_{i}(A)r_{0}$ is perpendicular to the Krylov subspace $K_{i}(A^{T};\hat{r}_{0})$ and is equivalent to the statement $(\tilde{P}_{j}P_{i}(A)r_{0},\hat{r}_{0}) = 0$. We could now require that $r_{i}$ be perpendicular to $\tilde{P}_{j}(A^{T})\hat{r}_{0}$, where $\tilde{P}_{j}$ is a suitable $j^{th}$ order polynomial. For Bi-CG $\tilde{P}_{j} = P_{j}$.  This also equivalent to CGS where $\tilde{P}_{j}P_{i}(A)r_{0} = P^{2}_{j}(A)r_{0}$ (4).
+
+    To make Bi-CGSTAB we select a polynomial of the form 
+
+\begin{equation}
+   Q_{i}(x) = (1 - w_{1}x)(1 - w_{2}x)...(1 - w_{i}x)
+\end{equation}
+
+and we choose $w_{j}$ at each iteration step to minimize $r_{j}$ where $r_{j} = Q_{j}(A)P_{j}(A)r_{0}$. This gives a method that is more stable than CGS and faster than Bi-CG. The derivation of the details of the algorithm are given in (4), as are the unpreconditioned and the preconditioned algorithms.
+
+%----------------------------------------------------------------------
+\section{Rayleigh Quotient}
+First order perturbation expansions for eigenvalues. Let $(\lambda, x)$ be a simple eigenpair of $\ve{A}$. If we add a perturbation such that $\tilde{\ve{A}} = \ve{A} + \ve{E}$ then if $\ve{E}$ is small there is a simple eigenpair $(\tilde{\lambda}, \tilde{x})$ that approaches $(\lambda, x)$ as $\ve{E} \to 0$. Let $\tilde{\lambda} = \lambda + \phi$. If $y^{T}\tilde{x} = 1$ (normalize $\tilde{x}$) then $\tilde{x} = x + \ve{X}p$, note that $\ve{X} = \{x_{1} x_{2} ... x_{n}\}$ . With these terms, the Rayleigh Quotient can be defined as $y^{T}\tilde{\ve{A}}x$. 
+
+Let $r = \ve{A}u - \mu u$. To minimize $||r||_{2}$, set $\mu = \frac{u^{T}\ve{A}u}{u^{T}u}$, this is the RQ, where $r \perp u$. For $v^{T}u \ne 0$, we can define the RQ as:
+\begin{equation}
+  \frac{v^{T}\ve{A}u}{v^{T}u}
+\end{equation}
+
+If either $v$ or $u$ is an eigenvector of $\ve{A}$, then the RQ produces the corresponding eigenvalue. If either is near an \evec\ then the RQ approximates the \eval. In power method, the RQs $\frac{u_{k}^{T}\ve{A}u_{k}}{u_{k}^{T}u_{k}}$ provide an increasingly accurate approx to $\lambda$. If the RQ is used as the shift in inverse iteration, you get RQI. 
+
+The generalized \eval\ problem is $\ve{A}x = \lambda \ve{B}x$, where $(\lambda, x)$ is a right \epair\ of the pencil $(\ve{A}, \ve{B})$ for $x \ne 0$. There is a left \epair\ if $y^{T}\ve{A} = \lambda y^{T}\ve{B}$, $y \ne 0$. Let $\langle \alpha, \beta \rangle$ be a simple \eval\ of pencil $(\ve{A}, \ve{B})$. If $x$ and $y$ are right and left \evec s corresponding to $\langle \alpha, \beta \rangle$, then $\langle \alpha, \beta \rangle = \langle y^{T} \ve{A} x, y^{T} \ve{B} x \rangle$. This means the ordinary form of the \eval\ is:
+\begin{equation}
+ \lambda = \frac{y^{T} \ve{A} x}{y^{T} \ve{B} x} \:,
+\end{equation}
+which is the generalization of the RQ. 
+
+If $\ve{X}$ is an eigenbasis of $\ve{A}$ then $\ve{X}^{T}\ve{A}\ve{X}$ is the RQ of $\ve{A}$, which is an eigenblock. For the Arnoldi method, ${H}_{k} = \ve{V}_{k}^{T}\ve{A}\ve{V}_{k}$. This is just the RQ wrt the basis $\ve{V}_{k}$, in prelim: and we know that $\ve{V}$ is a basis for $\mathcal{V}$ and eigenspace $\mathcal{X} \in \mathcal{V}$). Thus, Arnoldi is gives a decomp to compute Ritz pairs. A less restrictive version of this is applicable to Krylov methods in general \cite{Stewart1998}. 
+
+ 
+
+%----------------------------------------------------------------------
+\section{Rayleigh Quotient Iteration}
+    Let $C$ be an $n$ x $n$ arbitrary complex matrix with spectrum $\{\lambda_{1}, \lambda_{2},...,\lambda_{r}\}$ and having eigenvectors normalized as shown below. If $\lambda_{i}$ is a multiple, then $\boldsymbol{x}_{i}$ and $\boldsymbol{y}_{i}$ will not be unique. If $C$ is defective then the $\{x_{i}\}$ will not span the whole space. When $C^{*} = C$ then $\boldsymbol{x}_{i} = \boldsymbol{y}_{i}$. 
+    
+    \begin{equation}
+       C\boldsymbol{x}_{i} = \lambda\boldsymbol{x}_{i}, \hspace{.2cm} \boldsymbol{y}^{*}_{i}C = \lambda_{i}\boldsymbol{y}^{*}, \hspace{.2cm} \boldsymbol{x}^{*}_{i}\boldsymbol{x}_{i} = \boldsymbol{y}^{*}_{i}\boldsymbol{y}_{i} = 1, \hspace{.4cm} i = 1,...,r
+    \end{equation}
+    
+    We define the Rayleigh Quotient, $\rho$, which assigns the following scalar quantity to any nonzero complex vector $u$:
+    
+    \begin{equation}
+       \rho(u) = \frac{u^{*}Cu}{u^{*}u} = \frac{\Sigma\Sigma c_{jk}\bar{u}_{j}u_{k}}{\Sigma \|u_{i}\|^{2}}
+    \end{equation}
+    
+    For all nonzero column vectors, $u$, $\rho(u)$ fills out a region that is closed, bounded, and convex. If $C$ is a normal matrix then $\rho$ is stationary at $u$ if and only if $u$ is an eigenvector of $C$ and $C^{*}$: 
+    
+    \begin{equation}
+       (C - \rho)u = 0, \hspace{.4cm} u^{*}(C - \rho) = 0^{*}
+    \end{equation}
+    
+   Additionally, given $u \ne 0$ then we have the minimal residual properties:
+   \begin{align*}
+      &||(C - \mu)u||^{2} \ge ||Cu||^{2} - ||\rho(u)u||^{2} \\
+      &||u^{*}(C - \mu)||^{2} \ge ||u^{*}C||^{2} - |\rho|^{2}||u^{*}||^{2}
+   \end{align*}
+   
+   Further, $u$ is orthogonal to $(C - \rho(u))u$ for any C. The Rayleigh Quotient Interation (RQI, see below) generates the Rayleigh sequence $\{\rho_{k}, v_{k}\}$. If $v_{k} \to \boldsymbol{x}_{1}$ as $k \to \infty$, then $\rho(v_{k}) \to \lambda_{1}$. It is important for our purposes to note that using the matrix $(C - \alpha)$ produces the sequence $\{\rho_{k} - \alpha, v_{k}\}$. The convergence rate is cubic for normal matrices. If RQI is started within a defined region around each eigenvector, the method will converge to that eigenvector. For the RQI choose a unit vector, $v_{0}$ and for $k = 1,2,...$  
+   \begin{align*}
+      (i)& \text{  form  } \rho_{k} = \rho(v_{k}) = v_{k}^{*}Cv_{k}, \\
+      (ii)& \text{  if  } C - \rho_{k} \text{  is singular, then solve  } (C - \rho_{k})v_{k+1} = 0 \text{  for  } v_{k+1} \ne 0 \text{  and halt. Otherwise, } \\
+      (iii)& \text{  solve  } (C - \rho_{k})w_{k+1} = v_{k}, \\
+      (iv)& \text{  normalize  } v_{k+1} = \frac{w_{k+1}}{||w_{k+1}||}. \\
+      (v)& \text{  } \tau_{k} = || (C - \rho_{k})^{-1}v_{k}||^{-1}.
+   \end{align*}
+   
+   For nonnormal matrices the stationary property is lost and the asymptotic convergence rate becomes quadratic at best. The norms of the residuals of a Rayleigh sequence are also no longer guaranteed to be monotonic decreasing so we cannot make assertions about global convergence properties. The method still converges in practice, just more slowly. Ostrowski has proposed methods to deal with some issues arising from using nonnormal matrices. A table is provided in (3) which details when to use which proposed method (3). 
+   
+%----------------------------------------------------------------------
+\section{Krylov + Evals + RQI}   
+
+\subsection{Spectral Transformation}
+Let $\lambda_{i}$ be the $i^{th}$ eigenvector of the matrix $A \in C^{n x n}$ with the corresponding eigenvector $x_{i}$. \\
+
+\noindent Let $p(\tau)  = \gamma_{0} + \gamma_{1}\tau + \gamma_{0}\tau^{2} + ... + \gamma_{k}\tau^{k}$. Then $p(\lambda)$ is an eigenvalue of  $p(A)$ with eigenvalue x. \\
+Let $r(\tau) = q(\tau)^{-1}p(\tau)$ where p and q are polynomials ($q(A)$ non singular). Then $r(\lambda)$ is an eigenvalue of $r(A)$ with eigenvector x.\\
+
+It is often possible to construct a polynomial or rational fuction, $\phi(t)$ such that $|\phi(\lambda_{i})| << |\phi(\lambda_{j})|$ for $ i \ne j$. In this case the eigenvalues of the transformed matrix $\phi(A)$ are transformed to $\phi(\lambda)$, but the eigenvectors remain the same. This means we perform a spectral transformation on a matrix while still finding the same eigenvectors.  (*Recall: Power Iteration converges like $|\frac{\phi(\lambda_{i})}{\phi(\lambda_{j})}|$ which is one reason this is important).
+
+If $\mu \notin \sigma(A)$ then $A - \mu I$ is invertible and $\sigma([A - \mu I]^{-1}) = \{ 1/(\lambda = \mu) : \lambda \in \sigma(A)\}$. The eigenvalues near the shift ($\mu$) become well separated from the others. Thus we can strategically choose $\mu$ to isolate the eigenvalues of interest without changing the corresponding eigenvectors. This is where RQI comes in. At each step we can change the shift (at the expense of a vector-matrix-vector multiply) on each iteration. Now we have an ideal shift **PERHAPS need another ref here...or mathm'l justification of why this works?**.
+
+\subsection{deriving a Krylov method}
+We impose a Galerkin condition on the Krylov subspace of interest, $\mathbf{K_{k}}$, and form Ritz pairs ($x \in \mathbf{K_{k}}(A, v_{1})$ is the Ritz vector and the corresponding Ritz value, $\theta$, satisfies $< w, Ax - x\theta > = 0 $ for all $w \in \mathbf{K_{k}}(A, v_{1})$). Let $W$ be an orthonormal basis for  $\mathbf{K_{k}}$ and $B \equiv W^{H}AW$. Then we can say (leaving out a bunch of info from the paper):\\
+
+\noindent $Ax - x\theta = \gamma \hat{p}(A)v_{1}$ where $\hat{p}(\lambda) \equiv det(\lambda I - B)$ is the characteristic polynomial of B and $\hat{p}(WBW^{H}) = 0$. $\gamma$ is a scalar.  \\
+\noindent $AWy - WBy = \gamma\hat{p}(A)v_{1}$ for any $y \in C^{k}$. \\
+
+Now we can say $V = WQ$ where $Q$ is a unitary matrix, $H = Q^{H}BQ$ is upper Hessenberg, and $v_{1} = Ve_{1}$. Using all of this we can show $AV = VH + f e^{T}_{k}$ where $f = \gamma\hat{p}(A)v_{1}$. We can say the Ritz values $\sigma(H) \subset \sigma(A)$ and corresponding Ritz vectors are eigenpairs for A. This is leads directly to the Arnoldi process. An alternate derivation is to truncate the reduction of A to Hessenberg form using shifted QR-iteration. 
+
+A k-step Arnoldi Factorization of A is:
+\begin{align*}
+AV_{k} &= V_{k}H_{k} + f_{k}e^{T}_{k} \\ 
+             &= (V_{k},v_{k+1})\binom{H_{k}}{\beta_{k}e_{k}^{T}} 
+\end{align*}
+
+\noindent where $\beta_{k} = ||f_{k}||$ and $v_{k+1} = frac{f_{k}}{\beta_{k}}$. Also, if $(x, \theta)$ is a Ritz pair, then $\theta = x^{H}Ax$, which is a Rayleigh Quotient when $x$ is a unit vector. We know the residual is $r(x) = Ax - x\theta$ and $||r(x)|| = |\beta_{k}e_{k}^{T}y|$, where $H_{k}y = h\theta$ and $x = V_{k}y$. Then we know when $f_{k} = 0$ the Ritz pairs are exact eigenpairs and when $f_{k}$ is small the residual is small.
+
+All this is used to produce the Arnoldi Algorithm where $V$ is an orthonormal basis for the Krylov subspace and $H$ is the orthogonal projection of $A$ onto this space. (6)
+ 
+%----------------------------------------------------------------------
+\section{Koch-Baker-Alcouffe: KBA}   
+    KBA is a massively parallel, 3D, $S_{N}$, ordered sweep algorithm for eigenvalue calculations on rectangular mesh. The sweep does a fixed number of sequential steps for each group and direction. Each step consists of the simultaneous solution of the source iteration equations for the cells associated with that step. Each step has a non-constant number of mesh cells that make a diagional plane. For an $N^{3}$ mesh there is $O(N^{2})$ parallelism. The source iteration equation is exactly inverted in a single sweep.
+
+    The way the 3D plane sweep works: solve one cell with three incoming boundary conditions (BCs). Next, the three adjacent cells making up a diagonal plane can be solved simultaneously (each adjacent cell already had two incoming fluxes because of the BCs, thus the solution of our first cell gives the remaining required incoming condition). Then, the next diagonal plane consisting of six cells is solved, and so on. The number of cells progresses as: 1, 3, 6, 10,..., mesh-based max,..., 10, 6, 3, 1. For an $N$ x $N$ x $N$ mesh this gives $O(N^{2}/3)$ parallelism. 
+
+    To deal with the non-constant number of meshes the algorithm projects the 3D diagonal plane onto the 2D YZ plane. The Y and Z dimensions are distributed across processors and the X dimension is local to each processor. Each set of plane indices is mapped to a set of cell indices via an X index array. However, the diagonal plane does not cut through the XYZ mesh at every YZ loaction making some of the cells ``inactive". To deal with this the X dimension is padded by one to create a ``fake" layer for dealing with these inactive cells. An inactive cell does not actually have a valid X index, so we assign an index that is one greater than the max X index to indicate that it is inactive. Thus we disregard solutions from the inactive cells. I think Denovo may solve in the XY plane and map via Z... \\
+
+    Algorithm mechanics:
+\begin{enumerate}
+    \item Initialize the X indirection arrays to provide proper tilt and initialize the inflow arrays as prescribed by BCs. 
+    \item Create ``protected" X indirection arrays by pointing inactive YZ locations to the fake X layer. 
+    \item Gather 3D data (cross section and source) into 2D temporary arrays using the protected X indirection arrays.
+    \item Solve the $S_{N}$ equations for the entire 2D YZ working space.
+    \item Scatter the fluxes back into the 3D mesh using the protected X indirection arrays.
+    \item Shift the Y outflows in Y and Z outflows in Z and handle their BCs.
+    \item Increase or decrease the X indirection arrays as appropriate for the next diagonal plane.
+    \item Repeat from step 2 until the entire mesh has been swept. 
+\end{enumerate}
+
+    The only communication is in the Y and Z shifts, though the solution of inactive cells leads to wasted computations. Two increase efficiency there are two ``pipelining" approaches.
+
+    The first approach is called ``successive in angle, successive in quadrants" (method 1). For a given quadrant we start with the first angle (m=1 for $\mu < 0$) on the diagonal plane above $X_{max}$. We step from one plane to the next, decrementing the X indirection array. When we get to $X_{min}$, we apply the $X_{min}$ BC and start the sweep in the +X direction for m=1 and $\mu > 0$. when the YZ locations for the $\mu > 0$ calculations get to $X_{max}$, we start on m=2 for $\mu < 0$. After all of the diagonal planes for the angle pairs are finished, we go to the next quadrant. 
+
+    The second approach is called ``simultaneous in angle, successive in quadrants" (method 2). All of the angles in an octant are solved simultaneously and pipeline the $\mu < 0$ and the $\mu > 0$ octant. This relies on having a rectangular mesh. The process is repeated for each octant as in method 1. Which algorithm is better depends on the computer architecture used, and possibly on the $S_{N}$ order. I don't know what Denovo does. Note: this method can use any spatial differencing scheme. 
+
+    Some highlights and conclusions: no communication is required to compute the source term in the source iteration equation. The algorithm is completely intrinsic (*what does that mean?) because it does not need to iterate to invert the source iteration equation. This means the instructions to solve on a single processor are the same as for thousands of processors. Small meshes do not scale well (5).  
+
+
+%----------------------------------------------------------------------
+\section{Krylov Subspace Iterations for Deterministic...(7)}
+
+\subsection{Arnoldi Method ideas}
+We project a vector $x \in K_{m}(A, \phi_{0})$ (where $\phi_{0}$ is a starting vector) onto a Krylov subspace using the Galerkin orthogonality condition $(w,Ax-\lambda x) = 0$ for all $w \in K_{m}(A,\phi_{0})$. The approximate eigenpair we get out, $(x,\lambda)$ is a Ritz pair. If the component of the eigenvector orthogonal to the subspace is small, the Ritz pair is a good approximation to the real pair. We compute these pairs using the Arnoldi method. 
+
+\subsection{Diffusion and subspace methods}
+Vidal et. al. have applied variational acceleration and subspace methods to the multigroup diffusion equation. They have no upscattering. They transform the eigenvalue problem from
+
+\begin{align}
+  \mathbf{L}\phi &= \frac{1}{\lambda}\mathbf{M}\phi \\
+  &\text{ to }\\
+  \mathbf{AX} &= \mathbf{X\Lambda}
+\end{align}.
+
+Here $\mathbf{A} = \mathbf{L^{-1}M}$ and $\mathbf{\Lambda}$ contains the $p$ dominant eigenvalues of $\mathbf{A}$. and the columns of $\mathbf{X}$ are the corresponding eigenvectors. They are interested in a set of dominant eigenmodes to capture information about reactor power. 
+
+They investigate two different subspace iteration methods. The first uses a Rayleigh-Ritz projection. They start with an initial set of independent vectors that are made orthonormal and used as X. They Calculate Z = AX, orthonormalize it using Gram-Schmidt, and compute a Rayleigh-Ritz projection: $\hat{A}^{k+1} = (Z^{k+1})^{T}AZ^{k+1}$. They use $\hat{A}$ to solve an eigenvalue problem ($\hat{A}^{k+1}Q^{k+1} = Q^{k+1}\Delta^{k+1}$) and compute an update, $X^{k+1} = Z^{k+1}Q^{k+1}$. This gives the $p$ dominant eigenmodes. 
+
+The second approach uses a symmetric Rayleigh-Ritz projection. The key differences: they don't orthonormalize Z, their set of eigenvalues is now squared, $(\Delta^{k+1})^{2}$, they compute $T^{k+1} = Q^{k+1}(\Delta^{k+1})^{-1}$, and the new iteration base is $X^{k+1} = Z^{k+1}T^{k+1}$. This yields an orthonormal basis, $X^{k+1}$, of the subspace spanned by the eigenmodes of interest. They must now do more work to get the actual eigenvalues: $X = X^{k+1}U$, where $(X^{k+1})^{T}AX^{k+1}U = U\Lambda$. 
+
+*These ideas are related to what I am doing in that this is a subspace iteration method and I think they could apply it over a block of energy groups. However, we're only looking for one eigenvalue and we are doing transport.* 
+
+They then do a variational acceleration technique where they do a bunch of fancy stuff to get some factors to express each x (eigenvector) as an expansion of the previous eigenvector plus some terms. They use these x's and A to expand the eigenvalues where the leading term is the Rayleigh quotient and the following term is imaginary. The imaginary term must be small and they have these extrapolation factors designed to minimize this term. They use this every few subspace iterations to give new directions in the iteration subspace, thus reducing the total number of iterations. They found the symmetric method to be better for their problems and note that the whole thing is easy to parallelize (9).
+
+The Verdu paper compares a modification of the implicitly restarted Arnoldi method (IRA, developed by Sorensen) to power iteration and the symmetric Rayleigh-Ritz projection method using the variational acceleration technique (described above). They apply this to a multigroup neutron diffusion equation. IRA uses shifted QR iteration and Verdu et. al. have adapted this for diffusion. 
+
+\emph{The restarted Arnoldi method}: starts with a vector $x_{1}$ and builds an orthonormal basis of the Krylove subspace (the usual thing). After $m$ iterations, reinitialize the process by computing the real Shur form of $H$: $T = Z^{T}HZ$ (I don't know what $Z$ is...). Set $X = XZ$ and the first column of $X$ is normalized to one and used as the starting vector. Repeat this until the desired number of eigenvalues in $H$ have converged. 
+
+\emph{IRA}:\\
+Step 1: Do the m-step basic Arnoldi method to get $X, H, f_{m}$ ($f_{m}$ is $Ax_{j} - \sum_{i=1}^{j}x_{i}h_{i,j+1}$ and $h_{i,j+1} = x_{i}^{T}Ax_{j+1}$). \\
+Step 2: Get the eigenvalues, $\theta_{1},...,\theta_{m}$, and eigenvectors of $H$. Choose $n$ \textbf{un}desired eigenvalues. Set $Q = I_{(m \text{ x }m)}$. \\
+For $j$ = 1, 2,...,$n$:\\
+\indent Compute the QR factorization: $Q_{j}R = H - \theta_{m-(n-1-j)}$. (Note: $Q$ is an orthogonal matrix and $R$ is upper-triangular). \\
+\indent $H = Q_{j}^{T}HQ_{j}$, \hspace{0.2cm} $Q = QQ_{j}$\\
+End\\
+Set $X = XQ$; compute $f_{k} = x_{k+1}h_{k+1,k} + f_{m}q_{m,k}$ where $k = m - n$.\\
+Use the Arnoldi loop with $k = m - n$ to get $X, H, f_{m}$. \\
+Step 3: When this has converged store $x_{1}$ in the restart file. \\
+After all of that has converged, it is time to find the $p$ eigenvalues of interest (10): 
+\begin{enumerate}
+ \item Compute the partial Schur form $HQ_{p} = Q_{p}R_{p}$. 
+ \item Store the first $p$ columns of $X$; $x_{i} = X(Q_{p})_{i}$. 
+ \item Do eigenvalue decomp: $R_{p}S_{p} = S_{p,p}$, where $S$ is a diagonal matrix whose elements are the dominant eigenvalues of $A$.
+ \item $X_{p} = X_{p}S_{p}$.
+\end{enumerate}
+
+This is not particularly clear...it is likely the original Sorensen paper will be much better. 
+
+\subsection{IRAM}
+Implicitly Restarted Arnoldi Method:\\
+- a Krylov subspace iterative method applied to criticality problems, designed to deal with high dominance ratios. \\
+- Can be applied to symmetric or non-symmetric problems. \\
+- It is ``wrapped around'' existing power iteration. \\
+- Uses ARPACK in Atilla (ld, $S_{N}$, 3D, unstructured tet mesh).
+
+The idea is to find the largest few eigenvalues of the problem $\mathbf{A}\phi = k\phi$. ARPACK is given the number of eigenvalues desired, the dimension of the Krylov subspace, and the convergence criterion. Each IRAM iteration does the matrix vector multiply. Subspace iteration is like applying power iteration to $p$ vectors of interest simultaneously where these vectors have been orthogonalized to one another. This iteration converges to $p$ eigenvectors of the $p$ largest eigenvalues. 
+
+Consider an Arnoldi process where the starting vector is a linear combination of eigenvectors of the operator. The coefficients used in the combination will evolve in a predictable way through repeated application of the operator (*I don't completely understand this...*). 
+
+The IRAM process uses restarted Arnoldi, and after the first $m$ steps constructs a new starting vector, $\hat{\phi_{0}}$, that is a linear combination of the $s$ dominant Ritz vectors of interest. These $s$ vectors can be used to form a Polynomail, $P(x) = (x - x_{1})(x - x_{2})...(x - x_{r})$, to determine convergence:
+
+\begin{align}
+   &\underline{\max_{j = r+1,...,n} | P(k_j) |} \\
+   &\min_{j = 1,...,r} | P(k_j) | \nonumber
+\end{align}
+
+\noindent ARPACK uses the unwanted eigenvalues (the m-r smallest) of the upper Hessenberg matrix made through Arnoldi as the roots of the polynomials. This is mathematically equivalent to make a new Krylov subspace starting with a vector that is a linear combo of the $r$ dominant Ritz vectors. 
+
+Traditional power iteration acceleration methods can be viewed as a Krylov method with a dimension equal to the number of working vectors. 
+
+\subsection{Upscatter with IRAM}
+
+\begin{equation}
+  \phi^{(l+1)} = \mathbf{D}(\mathbf{L} - \mathbf{MS_{L}D})^{-1} \Big(\mathbf{MS_{U}} + \frac{1}{k^{(l)}}\mathbf{F}\Big) \phi^{(l)}
+\end{equation}
+
+When there is no upscattering, forward substitution is used to solve the problem group-by-group. Each inner iteration is solved with power iteration or a Krylov method. 
+
+If there is upscatter, the treatment of $\mathbf{H}^{-1} = (\mathbf{L} - \mathbf{MS_{L}D})^{-1} $ is viewed as embedded in the power iteration because it works with a single vector of scalar fluxes (What does this mean?). They do Gauss-Seidel outer iteration -or- a Krylov method. The do inner iteration with Krylov, and ``intermediate'' iteration on $\mathbf{H}^{-1}$ (what is typically thought of outer iteration) and an outermost iteration with IRAM (?). In power iteration they use the previous $\phi$ as the initial guess for the inner iterations. They can't do this for IRAM (?). 
+
+Do they do what I did? I'm not sure...???
+
+%----------------------------------------------------------------------
+\section{notes on some papers for eigenvalue chp of prelim}
+
+\subsection{conjugate gradient}
+from Wikipedia:
+``In mathematics, the conjugate gradient method  is an algorithm for the numerical solution of particular systems of linear equations, namely those whose matrix is symmetric and positive-definite. The conjugate gradient method is an iterative method, so it can be applied to sparse  systems that are too large to be handled by direct methods such as the Cholesky decomposition. Such systems often arise when numerically solving partial differential equations.
+
+The conjugate gradient method can also be used to solve unconstrained optimization problems such as energy minimization.
+
+The biconjugate gradient method provides a generalization to non-symmetric matrices. Various nonlinear conjugate gradient methods seek minima of nonlinear equations.''
+
+Solving $Ax = b$ where we use the following information. Two vectors are conjugate if $u^{T}Av = 0$. We use a sequence of $n$ mutually conjugate directions, $\{p_{k}\}$, which form a basis of $R^{n}$.  Then
+
+\begin{align}
+x &= \sum_{i=1}^{n}\alpha_{i}p_{i} \nonumber \\
+b &= Ax = \sum_{i=1}^{n}\alpha_{i}Ap_{i} \nonumber \\
+\alpha_{k} &= \frac{p_{k}^{T}b}{p_{k}^{T}Ap_{k}} \nonumber \\
+\end{align}
+In the algorithm $\alpha$ is the rayleigh quotient. This method can also be preconditioned. CG can be derived as a variation of the Arnoldi/Lanczos iteration and is based on the orthogonality of the residuals and conjugacy of the search directions (could look at derivation if needed - comes from the Krylov subspace made by $A$ and the residual $r_{0}$).  
+
+\subsection{suetomi, 1988}
+One group, 2D diffusion equation; finite difference method gives eigenvalue problem. Power method is frequently applied, consists of inner iteration to solve the linear systems and outer iteration to solve the source and eigenvalue. This becomes quite expensive. 
+
+The conjugate gradient method uses the RQ minimization technique and has quadratic convergence near the eigensolution, and does not need the inner-outer structure.  Convergence depends on the condition number, they compare the regular method with a preconditioned one - also compare to the power method.
+
+They are solving the DE in the form $A\phi = \lambda F \phi$. Here $A$ is positive definite, generally non symmetric, and made of the discretized Laplacian operator and the absorption term; $F$ is diagonal and has the fission source term. $A$ is symmetric in cartesian geometry with uniform grid - they only look at this case. 
+
+  CG seeks the stationary points of the RQ by minimization techniques. The convergence is very sensitive to the ellipticity of $A$, which is measured by the condition number. 
+  
+ Tthey use two preconditioners:  incomplete Choleski decomposition, modified incomplete Choleski decomposition. $A \approx U^{T}DU$, which makes the RQ:
+ 
+ \begin{align}
+ R(\tilde{\phi}) &= (\tilde{\phi}, \tilde{A}\tilde{\phi})/(\tilde{\phi}, \tilde{F}\tilde{\phi}) \\
+ &\text{where} \nonumber \\
+ \tilde{\phi} &= D^{1/2}U \phi \nonumber \\
+ \tilde{A} &= (D^{1/2}U)^{-T} A (D^{1/2}U)^{-1} \nonumber \\
+ \tilde{F} &=  (D^{1/2}U)^{-T} F (D^{1/2}U)^{-1} \nonumber
+ \end{align}
+
+They modify the CG method to use the preconditioned terms. They used SOR in the inner iterations to accelerate the power method, no outer accle techniques. They did two test problems. CG and SOR did about the same, the preconditioned (with modified being best) did substantially better. 
+
+\subsection{Gupta 2004}
+3D, multigroup transport eigenvalue problem; finite difference in space, diamond difference scheme, and $S_{N}$. Usually obtained by power it (PI). They use a Krylov subspace method, ORTHOMIN(1), and a matrix-free approach. Both methods require within group iterations for self-scattering source - accelerated with CG (another Krylov method).  
+
+$Ax = \lambda B x$. 
+
+They mention previous accel methods include shifted PI, coarse mesh rebalance, and Chebyshev acceleration. The idea to use ORTHOMIN(1) inspired by past work of (Suetomi, E., Sekimoto, H., 1991. Conjugate gradient like methods and their application to eigenvalue problems for neutron diffusion equations. Ann. Nucl. Energy 18 (4), 205Ð227). 
+
+Gupta extends Suetomi from diffusion to transport. This would nominally require sparse storage of $A$ and $B$ so matrix-vector products can be done. This paper, instead, does a matrix-free approach that doesn't require much code modification (we already don't for the matrix in transport codes). 
+
+They mention DSA and TSA. They use TSA for within group instead of source interation (SI) which they solve with CG. The compare PI with SI, PI with TSA(CG), and ORTHOMIN(1) with TSA(CG). They found TSA(CG) better than SI and ORTHOMIN(1) is better than PI. 
+
+\subsection{Oliveira 1998}
+1D, transport, 1 group. Need iterative methods for TE because the operators are highly non-normal. Can be slow to converge. They precondition Krylov subspace methods to make them faster. They use ILU(0) and multigrid algorithms (space and angle multigrid). They apply to Krylov methods such as GMRES and CGS. 
+
+Look this at more later for preconditioning stuff - explains multigrid methods as well. 
+
+%----------------------------------------------------------------------
+\section{Bibliography}
+(1) Templates for the Solution... \\
+(2) Sidje, Roger B. and William J. Stewart. A numerical study of large sparse matrix exponentials arising in Markov chains. Computational Statistics \& Data Analysis 29 (1999): 345-368. Electronic. \\
+(3) Parlett, B.N., Rayleigh ... \\
+(4) Van der Vorst, H.A. Bi-CGSTAB: ...\\
+(5) Baker... \\
+(6) Sorensen, Implicitly Restarted...\\
+(7) Warsa, Krylov Subspace...\\
+(8) Allen, J. The inverse power method...\\
+(9) Vidal, V. Variational Acceleration...\\
+(10) Verdu, G. The Implicit Restarted...\\
+(11) Stewart, G. W. Matrix Algorithims, Volume II... \\
+\end{document}
+

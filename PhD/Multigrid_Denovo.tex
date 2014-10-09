@@ -1,0 +1,276 @@
+\documentclass[12pt, letterpaper]{article}
+\usepackage[letterpaper, textwidth=6.5in, textheight=9in]{geometry}
+\usepackage{times}
+\usepackage{amsmath}
+
+\renewcommand{\baselinestretch}{1.3}
+\newcommand{\ve}[1]{\ensuremath{\mathbf{#1}}}
+
+% The float package HAS to load before hyperref
+\usepackage{float} % for psuedocode formatting
+\usepackage[pdftex]{hyperref}
+
+% define a style for pseudocode. This must load AFTER hyperref.
+\floatstyle{ruled}
+\newfloat{algorithm}{h}{lop}
+\floatname{algorithm}{Algorithm}
+
+\date{\today}
+\title{Multilevel in Energy for Denovo}
+\author{Rachel Slaybaugh}
+\begin{document}
+\maketitle
+
+\section{Mathematical Details}
+We are solving:
+%
+\begin{align}
+  \ve{L}\psi &= \ve{MS}\phi +  \ve{M}q\:,  \text{ ( } q \text{ is either }  q_{e} \text{ or } \frac{1}{k}\ve{F}\phi \text{ ) }\:. \\
+  \phi &= \ve{D}\psi \:. \text{ This can be combined to give} \\
+  \underbrace{\bigl( \ve{I} - \ve{DL}^{-1}\ve{MS} \bigr)}_{\ve{A}} \phi &= \underbrace{Q}_{b} \:, \: Q = \ve{DL}^{-1}\ve{M}q
+  \label{eq:transport}
+\end{align}
+
+Note that $Q$ includes all sources excluding within-group scattering [ref tom scale]. Let us define a preconditioner $\ve{G}$ such that $\ve{G} \approx \ve{A}$, but is easier to invert than $\ve{A}$. In this case, we can rewrite \eqref{eq:transport} to be right preconditioned:
+%
+\begin{equation}
+  \ve{A} \ve{G}^{-1} \ve{G} \phi = b
+  \label{eq:precondTrans}
+\end{equation}
+
+For this problem, the preconditioner is Multigrid in energy. The inversion of $\ve{G}$ is carried out by applying a Multigrid V-cycle ($v \leftarrow \ve{G}(v, b)$), made up of multiple levels of the v-cycle ($v^h \leftarrow G(v^h, b^h)$). Mathematically this is $\ve{G}v = b \Rightarrow v = \ve{G}^{-1}b$. See Algorithm \ref{algo:MG}.
+%
+\begin{algorithm}
+  \caption{ Multigrid v-cycle: $v^h \leftarrow G(v^h, b^h)$}
+  \label{algo:MG}
+  \begin{list}{}{\hspace{2em}}
+    \item Relax $\mu$ times on $\ve{A}^h \phi^h = b^h$ on the fine grid $\Omega^h$ using initial guess $v^h$. This is approximating $v^{h} = \ve{A}^{-1}b^{h}$. 
+    \item Compute the residual, $r^h = b^h - \ve{A} v^h$. 
+    \item Using some restriction operator, $\ve{R}_h^{2h}$, restrict the residual to a coarser grid: $r^{2h} =  \ve{R}_h^{2h} r^h$. 
+    \item Solve the residual equation, $\ve{A}^{2h} e^{2h} = r^{2h}$, on coarse grid $\Omega^{2h}$. 
+    \item Using some prolongation operator, $\ve{P}_{2h}^h$, prolong (interpolate) the coarse grid error back to a finer grid: $e^h = \ve{P}_{2h}^h e^{2h}$. 
+    \item Add the error to the fine grid guess: $v^h \rightarrow v^h + e^h$. 
+    \item Relax $\mu$ times on $\ve{A}^h \phi^h = b^h$ on $\Omega^h$ to get an improved solution. 
+  \end{list} 
+\end{algorithm}
+%
+
+%The relaxation method is weighted Jacobi. For a given group, $g$, weighted Jacobi can be written as follows where the inner iteration index is $k$ cite[Briggs2000]:
+%%
+%\begin{equation}
+%  \bigl( \ve{I} - \ve{DL}^{-1}\ve{MS}_{gg} \bigr) \phi_{g}^{k+1} = \ve{DL}^{-1}\ve{M} \bigl( \omega \sum_{g' = 0}^{G} \ve{S}_{gg'} \phi_{g'}^{k} - \ve{S}_{gg} \phi_{g}^{k} \bigr) + \omega b_{g} + (1 - \omega) \phi_{g}^{k} 
+%  \label{eq:relax}
+%\end{equation}
+
+The relaxation method is weighted Richardson (fixed-point) iteration: 
+\begin{align}
+  x^{k + \frac{1}{2}} &= \ve{TMS}x^{k} + b \:, \text{and} \nonumber \\
+  x^{k+1} &= \omega x^{k + \frac{1}{2}} + (1 - \omega) x^{k} \:, \text{ which can be combined to give } \nonumber \\
+  x^{k+1} &= \omega \ve{TMS}x^{k} + \omega b + (1 - \omega) x^{k} \:. 
+  \label{eq:relax}
+ \end{align}
+Some notes: this formulation takes the identity portion of $\ve{A}$ into account, $b$ must have been swept already, and when doing RQI, $\mathbf{S}$ becomes $\tilde{\ve{S}} = \ve{S} + \rho\ve{F}$ and the right hand side becomes $(\frac{1}{k} - \rho)\ve{DL}^{-1}\ve{MF}\phi$.
+
+To solve 
+%
+\begin{equation}
+  \ve{A} \ve{G}^{-1} \ve{G} \phi = b \nonumber
+  \label{eq:precondTrans}
+\end{equation}
+% 
+we must break the problem up into several steps: 
+%
+\begin{align}
+  \text{Define} \qquad y &= \ve{G}\phi \\
+  \text{and with GMRES solve} \qquad \ve{AG}^{-1}y &= b \:. \\
+  \text{After finding }y\text{, the final step is} \qquad \phi &= \ve{G}^{-1}y \:.
+\end{align}
+%
+
+We do not have access to the GMRES solver, so carrying out the second step means we must apply the preconditioner at different points to the iteration vectors we hand GMRES. Let $v^{k}$ be an iteration vector that represents $y$, and let $z^{k}$ be an intermediate iteration vector. At each step the equations are shown ways: the equation being solved, the symbolic representation of the outcome, and the way this is written in multigrid syntax. The first thing is to apply the preconditioner to the intermediate vector,
+%
+\begin{align}
+  \ve{G}z^{k} &= v^{k} \:, \\
+  z^{k} &\approx \ve{G}^{-1}v^{k} \:, \nonumber \\
+  z^{k} &\leftarrow G(z^{k}, v^{k}) \:. \nonumber
+\end{align}
+%
+Next, apply $\ve{A}$ to $z^{k}$ and set it equal to $v^{k+1}$ and $y = v^{k+1}$,
+\begin{align}
+  v^{k+1} &= \ve{A}z^{k} \:, \\
+  v^{k+1} &\approx \ve{AG}^{-1}v^{k} \:, \nonumber \\
+  y &= \ve{A}[z^{k} \leftarrow G(z^{k}, v^{k})] \:. \nonumber
+\end{align}
+%
+Remember that $y = \ve{G}\phi$. To get the final solution $\phi$, apply the preconditioner again to an iteration vector $w$,
+%
+\begin{align}
+  \ve{G}w^{k} &= y \:, \\
+  w^{k} &\approx \ve{G}^{-1}y \:, \nonumber \\
+  \phi &= w^{k} \leftarrow G(w^{k}, y) \:. \nonumber
+\end{align}
+
+%The GMRES algorithm \emph{with} preconditioning can be seen in Algorithm \ref{algo:GMRES}. Two steps need to be considered as they are different from the standard GMRES. The first step in the for loop must be broken into two steps (previously only one). First, the multigrid preconditioner must be called using $v_{j}$, the $jth$ column vector of the orthonormal basis being formed for the Krylov space, and $x$, an iteration vector: $x \leftarrow G(x, v_{j})$. Next, $\ve{A}$ is applied to $x$ in the usual fashion. The remainder of the algorithm proceeds as usual until the very final step where the new $\phi$ is calculated. To do this, $y$ is treated as the source and $\phi$ as the solution vector, that is, $\phi \leftarrow G(\phi, y)$.
+
+%%
+%\begin{algorithm}
+%  \caption{ Preconditioned Generalized Minimum RESidual}
+%  $v_0 = \frac{b}{||b||}$ \\
+%  $\beta = ||b|| e_1$ \\
+%  For $j = 0$ to $k$: 
+%  \begin{list}{}{\hspace{2em}}
+%    \item $x = \ve{G}^{-1}v_{j}$, $q = \ve{A}x$
+%    \item For $i = 0$ to $j$:
+%    \begin{list}{}{\hspace{2em}}
+%       \item $\text{ } h_{i,j} = v_{i} \cdot q$
+%       \item $\text{ } q = q - h_{i,j} \times v_{i}$
+%    \end{list} 
+%    \item $\text{ } h_{j+1,j} = ||q||$ 
+%    \item $\text{ } v_{j+1} = \frac{q} {h_{j+1,j}}$ 
+%  \end{list}
+%  End For \\
+%  Using least squares, solve $y_k \leftarrow ||\beta - \ve{H}_{k} y_{k}||_{2}$. \\
+%  Form the solution $\phi_{k} = \ve{V}_k \cdot y_k$ and finally $\phi_{k} \leftarrow \ve{G}^{-1}\phi_{k}$.
+%  \label{algo:GMRES}
+%\end{algorithm}
+%
+
+\section{Implementation in Denovo}
+Two new classes have been added to denovo to implement multilevel preconditioning in energy. The class that does the bulk of the work and data-handling is the \verb+Multilevel_Preconditioner+ class. The \verb+Relaxation+ class simply does the relaxation portion of the multigrid. 
+
+\subsection{The Relaxation Class}
+A new within-group solver, the \verb+Relaxation+ class, has been added to Denovo to implement Equation \eqref{eq:relax}. The number of relaxation iterations (max value for $k+1$) can be set in the database using \verb+''relax_count''+, and the relaxation weight is set using \verb+''relax_weight''+. There is a constructor, a \verb+set_angles+ function that must be called before doing any relaxations, a \verb+relax+ function that does relax\_count relaxations, and an \verb+iterate+ functions that simply does one Richardson iteration. The relaxation class stores an SP\_Sweep\_Source\_DB, the relaxation count, and the weight. 
+
+The constructor takes an SP\_Sweep\_Source\_DB that contains all of the source terms. This database should have all of the scattering sources (within-group, upscattering, and downscattering) as well as a shifted fission source if applicable. The \verb+source_range+ and \verb+moment_range+ must be set in the calling class. The angles are set in the relaxation class. The interface to this class \emph{does not} change when doing RQI. All that happens is that the sweep\_source\_db must contain fission. 
+
+The relax function takes a const\_View\_Field of the right hand side that should have \emph{already been swept} if needed, and a View\_Field of the moments at the current level. The moments are updated during the iteration process.
+
+\subsection{The Multilevel\_Preconditioner Class}
+The \verb+Multilevel_Preconditioner+ class is a right preconditioner to be used by the upscatter solvers. It can only work over the whole block of energy groups right now. It could be modified so that it can be applied only over the upscatter block.
+
+\noindent About the constructor:
+\begin{itemize}
+  \item The constructor takes the database, octants, a state, and a mesh.
+  \item The default number of v-cycles is 2; this can be changed using ``num\_v\_cycles'' in the database.
+  \item The number of levels is currently set such that the coarsest level will have 1 group. This is computed by
+  \begin{equation}
+    \text{floor}\bigl( \frac{ln(\text{num\_groups }-1)}{ln(2)}\bigr) + 2 \nonumber \:.
+  \end{equation}
+  \item rqi is turned on by setting ``eigen\_solver'' in the database to either ``rayleigh\_quotient'' or ``shifted\_inverse''.
+  \item Sets whether doing reflecting or vacuum boundaries.
+\end{itemize}
+%-------------------------------------------------------------------------------------------------------
+\subsubsection{The initialize function}
+\begin{itemize}
+  \item The initializer takes the material database, a sweeper, a const LG\_Indexer, and, optionally, a left\_shift (the rayleigh quotient or fixed shift).
+  \item This function makes the mat\_dbs, states, energy communicators, decompositions, transport operators, and relaxers for all levels; sets the angles in the sweeper; initializes the left and right vectors to zero; and, if doing rqi, adds fission to the left sweep\_source\_db.
+  \item The relaxer is created with a zero source\_db and a left sweep\_source\_db that has all scattering and, optionally, fission. The right side source is passed-in when relax is called (i.e.\ the relaxer doesn't need to store it).
+  \item Fission is initialized with the passed-in left shift. 
+\end{itemize}
+
+\noindent A variety of functions are called by \verb+initialize+ that set up all the different items used in the V-cycle.
+
+\noindent About \verb+restrict_mat_db+:
+\begin{itemize}
+  \item Takes the material database.
+  \item Restricts the material data down to all energy levels.
+  \item Sets the number of groups at the finest level to be the number in the state, and on each subsequent level to be: floor( (previous level's number of groups + 1) / 2 ).
+  \item To ensure that matids are preserved at each level, a map of matids is made. I am not positive that this will be correct in different spatial decompositions...
+  \item For each subsequent level a new mat\_db is made with the right number of materials, material ids, and number of groups. This includes fission if doing rqi.
+\end{itemize}
+
+\noindent About \verb+restrict_total+:
+\begin{itemize}
+  \item Takes an XS Vector to hold the new, coarser-level cross sections, a const XS Vector of old, finer-level cross sections, and the level.
+  \item Restricts the total cross sections from one level to a coarser level.
+  \item If there are an even number of groups, all neighboring fine entries are averaged to make coarse entries. If there are an odd number, the last groups are set to be the same and the remainder are averaged.
+\end{itemize}  
+  
+\noindent About \verb+restrict_scattering+:
+\begin{itemize}
+  \item Takes an XS Vector to hold the new, coarser-level cross sections, a const XS Vector of old, finer-level cross sections, and the level.
+  \item Average the fine data to make the coarse data, where the average is in both the g and g' directions. This means for each moment combine data like this: \\ 
+  $xs_s(g,g') = \frac{1}{4}(2g,2g' + 2g+1,2g' + 2g,2g'+1 + 2g+1,2g'+1)$. 
+   \item When there are an even number of groups at the fine level, all new cross sections use the 4-group averaging formula.
+  \item When there are an odd number of groups at the fine level, the last column and row of new cross sections are treated differently. In this case the new cross sections are only an average of two items, except the (G,G') value:
+  \begin{align}
+    xs_s(G,g') &= 1/2*(2G,2g' + 2G,2g'+1) \qquad \text{for } g' = 0, G'-1 \nonumber \\
+    xs_s(g,G') &= 1/2*(2g,2G' + 2g_1,2G') \qquad \text{for } g  = 0, G-1 \nonumber \\
+    xs_s(G,G') &= 2G,2G' \nonumber
+  \end{align}
+\end{itemize}  
+
+\noindent About \verb+restrict_fission+:
+\begin{itemize}  
+  \item Takes an SP\_FIS\_XS to hold the new, coarser-level fission cross sections, a const SP\_FIS\_XS of old, finer-level fission cross sections, and the level.
+  \item Restricts the nu-sigma-f and chi data from one level to a coarser level. 
+  \item If there are an even number of groups, all neighboring fine entries are averaged to make coarse entries. If there are an odd number, the last groups are set to be the same and the remainder are averaged.
+  \item This works just like restrict\_total.
+\end{itemize}  
+
+\noindent About \verb+set_state+:
+\begin{itemize}
+  \item Takes a level.
+  \item Makes a state at every level except the finest and initializes it to zero. 
+\end{itemize}
+
+\noindent About \verb+set_transport_operator+:
+\begin{itemize}
+  \item Takes a level.
+  \item Makes a left sweep\_source\_db and uses it to make a transport operator at every level.
+  \item Within-group, up, and down scattering are added. The moment range (all columns on set) and source range (all moment groups on set) are set. 
+  \item needs\_reduction is set to true.
+\end{itemize}
+
+%-------------------------------------------------------------------------------------------------------
+\subsubsection{The apply function}
+\begin{itemize}
+  \item Apply takes a view\_field of ..., a const\_View\_Field of the right side (iteration vector), and a const LG\_indexer.
+  \item The current moments are stored on the finest level left vector.
+  \item The right side iteration vector is stored on the finest level of the right vector.
+  \item Right now the coarsest-level solve is just done by calling relax again. This should probably be changed to something better.
+\end{itemize}
+
+\noindent A variety of functions are called by \verb+apply+, they do all of the different parts of the V-cycle. 
+
+\noindent About \verb+restrict+:
+\begin{itemize}
+  \item Takes a view\_field at the current level (h), a view\_field at the next-coarser level (2h), and the level.
+  \item Averages neighboring fine data together to make coarse data, $x_{2h}^{g} = \frac{1}{2}(x_{h}^{2g} + x_{h}^{2g+1})$.
+  \item If there are an odd number of groups, the last (lowest energy) group's values are set to be the same.
+\end{itemize}
+
+\noindent About \verb+prolong+:
+\begin{itemize}
+  \item Takes a const\_view\_field at the next-coarser level (2h), a view\_field at the current level (h), and the level.
+  \item Points that line up between the coarse and fine grid are simply set equal. To fill in the intermediate points on the fine grid, the two adjacent coarse values are averaged. That is
+  \begin{align}
+    x_{h}^{2g} &= x_{2h}^{g} \nonumber \\
+    x_{h}^{2g+1} &= \frac{1}{2}(x_{2h}^{g} + x_{2h}^{g+1}) \nonumber \:.
+  \end{align}
+  \item If there are an odd number of groups, the last (lowest energy) group's h value is set to half the 2h value.
+\end{itemize}
+ 
+\noindent \verb+calculate_residual+ calls the correct function to calculate the residual based on whether there are vacuum or reflecting boundaries; $r = b - (\ve{I} - \ve{DL}^{-1}\ve{MS})v$. The function takes a const\_view\_field of the right hand side, a view\_field of the left hand side, a view\_field for the residual, the level, and a const LG\_Indexer.
+
+About \verb+calculate_residual_vac+:
+\begin{itemize}
+  \item Takes a const\_view\_field of the right hand side, a view\_field of the left hand side, a view\_field for the residual, and the level.
+  \item The transport operator apply function is used to calculate $\ve{I} - \ve{DL}^{-1}\ve{MS})v$, just like \\ \verb+calculate_rq_vac+ in Upscatter\_Solver\_RQ.
+\end{itemize}
+
+About \verb+calculate_residual_refl+:
+\begin{itemize}
+  \item Takes a const\_view\_field of the right hand side, a view\_field of the left hand side, a view\_field for the residual, the level, and a const LG\_Indexer.
+  \item The reflecting within group solver is used group-by-group to compute $(\ve{DL}^{-1}\ve{MS})v$, like in \verb+calculate_rq_refl+ in Upscatter\_Solver\_RQ.
+  \item At the finest level, the passed-in source database is given to the within group solver constructor. For the subsequent levels a zero source database is used. I am not positive that this is correct, but I think so. I don't see how the source database comes into play at all (in which case I may not need to store the passed-in source\_db or have a conditional here for what level we're on). 
+\end{itemize}
+%-------------------------------------------------------------------------------------------------------
+\noindent About \verb+update_shift+, which is not called by the apply funciton:
+\begin{itemize}
+  \item Takes a left shift (the rq or fixed-shift) 
+  \item Updates the shift in all of the left sweep\_source\_dbs.
+  \item This needs to be called at every new eigenvalue iteration when doing rqi.
+\end{itemize}
+
+\end{document}

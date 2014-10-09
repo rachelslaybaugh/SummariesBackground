@@ -1,0 +1,230 @@
+\documentclass[12pt,twoside]{article}
+\usepackage{amsmath}
+\date{\today}
+\title{Solver Packages: PetSc and Trilinos}
+\author{Rachel Slaybaugh}
+\begin{document}
+\maketitle
+
+This brief report gives an overview of some important details about PETSc and Trilinos. The purpose is to give some basic information such that the two packages can be compared and I will then have some basis for selecting one for future use. 
+
+\section{Portable, Extensible Toolkit for Scientific Computing (PETSc)} 
+"PETSc is a suite of data structures and routines that provide the building blocks for the implementation of large-scale application codes on parallel (and serial) computers. PETSc uses the MPI standard for all message-passing communication. PETSc includes an expanding suite of parallel linear, nonlinear equation solvers and time integrators that may be used in application codes written in Fortran, C, and C++. PETSc provides many of the mechanisms needed within parallel application codes, such as parallel matrix and vector assembly routines." Website: http://www.mcs.anl.gov/petsc; documentation: http://www-unix.mcs.anl.gov/petsc/petsc-as/documentation
+
+\subsection{KSP: Linear Equation Solvers} 
+This is the linear solver class which supports a wide range of methods to solve $Ax=b$: parallel and sequential, direct and iterative, and includes matrix free methods. The default solver is restarted GMRES, preconditioned with ILU(0) for uniprocess, and block Jacobi using ILU(0) for multiprocess. For direct solvers, the default is that factorization is not done in-place so that the original matrix will be retained. Within PETSc only sequential matrices are supported for direct solvers, though external packages can be used for other cases. Preconditioners can be set and customized as needed.
+
+Singular systems can be solved as long as the user knows the null space of the matrix. However, this may cause problems for direct solvers. Many external linear solvers can be used through the PETSc interface.
+\\
+\begin{flushleft}
+The direct linear solver methods are:
+\end{flushleft}
+
+
+\begin{tabular}{|l|c|c|c|}
+\hline
+\textbf{Direct Solvers} & \textbf{External Package} & \textbf{Parallel} & \textbf{Complex} \\
+\hline
+LU & many & X & X \\
+\hline
+Cholesky & many & X & X \\
+\hline
+QR & Matlab &  &  \\
+\hline
+XXt and XYt &   & X &   \\
+\hline
+\end{tabular} \\ 
+\\
+\begin{flushleft}
+\underline{Krylov methods:}
+\end{flushleft}
+
+The table below lists a summary of the available Krylov methods. The full listing of solvers can be found in the manual. Default settings along with more details for these methods can also be found in the manual. The default initial guess for the Krylov methods is zero. The user must explicitly specify if a nonzero guess is to be used.
+\\
+
+\begin{tabular}{|l|c|c|}
+\hline
+\textbf{Krylov Methods} & \textbf{Parallel} & \textbf{Complex} \\
+\hline
+Richardson & X &   \\
+\hline
+Chebychev & X & X \\
+\hline
+Conjugate Gradient & X & X \\
+\hline
+Generalized Minimal RESidual & X & X \\
+\hline
+BiCGSTAB & X & X \\
+\hline
+Transpose-Free Quasi-Minimal Residual & X & X \\
+\hline
+Conjugate Residual & X & X \\
+\hline
+CG Squared & X & X \\
+\hline
+Bi-CG & X & X \\
+\hline
+MINRES & X & X \\
+\hline
+Flexible GMRES & X & X \\
+\hline
+Least Squares & X & X \\
+\hline
+SYMMLQ & X & X \\
+\hline
+LGMRES & X & X \\
+\hline
+CG on the normal equations & X & X \\
+\hline
+\end{tabular} \\
+\\
+
+By default left preconditioning is used (though some methods support right preconditioning):
+\begin{equation}
+r_{L} \equiv M_{L}^{-1}b - M_{L}^{-1}Ax = M_{L}^{-1}r
+\end{equation}
+
+This residual is used by default for convergence testing. The default convergence test compares the residual norm to rtol (the norm of the right hand side), atol (the absolute size of the residual norm), and dtol (the relative increase in the residual). Convergence if:
+\begin{equation*}
+ \|r_{k}\|_{2}  < \max \left(rtol*\|b\|_{2}, atol\right)
+\end{equation*}
+Divergence if:
+\begin{equation*}
+\|r_{k}\|_{2}  > dtol*\|b\|_{2}
+\end{equation*}
+
+The user can, however, make their own convergence-testing routine. By default there is no convergence monitoring, but the user can elect to print out and/or plot information about convergence while the program is executing. Be aware that unless a Krylov routine is converged to a very small residual norm many of final the digits printed during monitoring are meaningless. 
+
+Also note that PETSc has routines for eigenvalue approximation via Arnoldi or Lanczos iteration. \\
+\\
+\underline{Preconditioners}
+
+A summary of the preconditioners available are listed in the table below. There are many preconditioners available which can be found in the manual. Details and options for all of them can also be found in the manual. In the block methods, different solvers can be used within the various blocks. Users can form new preconditioners by combining already defined preconditioners and solvers. Further, users can implement their own routine to use as a preconditioner (termed the shell preconditioner). For multigrid preconditioners the user is required to provide the coarse grid, smoothers, the restriction and interpolation functions/matrices and a code to calculate the residuals. PETSc supports both matrix-based and matrix-free multigrid preconditioners. 
+\\
+\begin{tabular}{|l|c|c|c|}
+\hline
+\textbf{Preconditioner} & \textbf{External Package} & \textbf{Parallel} & \textbf{Complex} \\
+\hline
+Jacobi &  & X & X \\
+\hline
+Block Jacobi &  & X & X \\
+\hline
+Point Block Jacobi &  & X & X \\
+\hline
+SOR (and SSOR) &  &  & X \\
+\hline
+Point Block SOR &  &  & X \\
+\hline
+Additive Schwartz &  & X & X \\
+\hline
+Incomplete LU (k) &  &  & X \\
+\hline
+ILU (k) & Euclid/hypre & X &   \\
+\hline
+ILU dt & pilut/hypre & X &   \\
+\hline 
+Incomplete Cholesky (k) &  &  & X \\
+\hline
+Matrix-free: Infrastructure &  & X & X \\
+\hline
+Multigrid (MG): Infrastructure &  & X & X \\
+\hline
+MG: Geom Structured Grid &  & X & X \\
+\hline
+MG: Geom Structured Grid & PFMG from hypre & X &   \\
+\hline
+MG: Algebraic & BoomerAMG/hypre & X &   \\
+\hline
+MG: Algebraic & ML/Trilinos & X &   \\
+\hline
+MG: Algebraic & Prometheus & X &   \\
+\hline
+Approximate Inverses & Parasails/hypre & X &   \\
+\hline
+Approximate Inverses & SPAI & X &   \\
+\hline
+Substructuring &  & X & X \\
+\hline
+\end{tabular} \\
+\\
+\subsection{SNES: Nonlinear Solvers} 
+This is the nonlinear solver class which supports data-structure neutral numerical routines to solve equations of the form $F(x)=0$. Newton-like methods provide the core of the package, with both line search and trust region techniques available. The default line search Newton method is cubic backtracking, though other routines can be selected (quadratic, none, none with no norms). The trust region method is taken from the MINPACK project, with some user parameters available for control. The full listing of nonlinear solvers can be found in the manual. The Newton iteration is carried out by by solving the linear system: 
+
+\begin{align*}
+&1. \hspace{0.2cm} (Approximately) solve: F'(x_{k})\Delta x_{k} = -F(x_{k}) \\
+&2. \hspace{0.2cm}  Update: x_{k+1} = x_{k} + \Delta x_{k}
+\end{align*}
+
+The user must provide a C, C++, or Fortran routine to evaluate the function F. They must also specify a method for computing the Jacobian. A common method is to assemble the Jacobian in the preconditioning process. The convergence tests vary by nonlinear solver selected, though users are again able to specify their own if desired. In general the same convergence monitoring options available for linear solvers are available here. SNES provides two methods of checking Jacobian matrix evaluation, so if a user provides an evaluation routine it's accuracy can be verified. 
+
+SNES has a variety of matrix-free methods and some straightforward ways to approximate the Jacobian using finite differencing methods. \\
+\\
+\underline{Inexact Newton-Like Methods} \\
+Inexact or truncated Newton techniques solve the linear systems iteratively and require less space and save computational work (compared to a full Newton method). Newton-Krylov methods fit into this category, where the subsidiary iterative technique for solving the Newton system is chosen from the class of
+Krylov subspace projection methods. Two levels of iterations occur for the inexact techniques, where during each global or outer Newton iteration a sequence of subsidiary inner iterations of a linear solver is performed. Appropriate control of the accuracy to which the subsidiary iterative method solves the Newton system at each global iteration is critical, since these inner iterations determine the asymptotic convergence rate for inexact Newton techniques. While the Newton systems must be solved well enough to retain fast local convergence of the Newton's iterates, use of excessive inner iterations, particularly when $\|x_{k} - x_{k-1}\|$ is large, is neither necessary nor economical. Thus, the number of required inner iterations typically increases as the Newton process progresses, so that the truncated iterates approach the true Newton iterates.
+
+\subsection{TS: Scalable ODE Solvers}
+ODEs arising from discretizing time dependent PDEs and/or steady-state problems using pseudo-timestepping can be solved in the TS library portion of PETSc. The built in solvers are Euler, Backward Euler, and a pseudo-timestepping method that can accommodate a variable time step at each physical node point. The TS library can also interface with other ODE solver packages to use more sophisticated methods. In general the user must provide a code for evaluating the function, F(u,t), and (for the nonlinear case) its associated Jacobian. 
+
+PETSc interfaces with PVODE which has Adams and backward differentiation formula (BDF) integrators available. PVODE uses the PC preconditioner package, but not the SNES nonlinear solver package. 
+
+For pseudo-timestepping, the user must provide a routine that computes the pseudo-timestep. Currently this solution technique is only available in its location-independent form. The location-dependent interface function has not yet been developed. 
+
+Explicit Runge-Kutta with variable timestep is also available.
+%----------------------------------------------------------------------------------------------------------
+\section{Trilinos}
+
+Trilinos is  a high-level, object-oriented, general, flexible software structure for developing and using solvers. It takes a variety of self-contained packages and links them together through some standard tools and interfaces so that methods can take advantage of one another. This is much bigger and broader than PETSc. PETSc does many of the solver functions, but with less C++-y abstraction and high-level interface. PETSc seems much more stripped down and much easier to understand. In fact, Trilinos uses PETSc as one of its pieces. 
+
+Trilinos also provides configuration management for the various packages such that things can be built together and with consistency (uses Autotools). A set of macros that perform common configuration tasks is available. Trilions also provides regression testing capability and automatic testing if so desired. BLAS and LAPACK and be interfaced via Trilinos without having to worry about C/C++ to Fortran interface issues (this all assumes you know C++ and have a good handle on object oriented stuff). 
+
+\begin{flushleft}
+\underline{Package Collections and Tools:}
+\end{flushleft}
+\textit{Petra} (primarily Epetra) is a collection of classes that supports the generic construction of vectors, sparse graphs, and both dense and sparse matrices. It provides serial, parallel and distributed memory services and uses BLAS and LAPACK where possible. Petra is essentially an underlying constructor. It is written for real-valued double-precision scalar field data only. It uses object-oriented C++ programming, but is accessible to C and Fortran.
+
+\textit{TSF} is a collection of abstract classes that provides an API to perform common solver operations. This gives users access to many solvers and allows them to use multiple solvers on one problem. It is most notably comprised of Thyra, which contains core classes, and TSFExtended, which handles overload, block, and composite operators. TSF provides flexibility since the user doesn't have to commit to any one linear algebra library. The basic abstract interfaces are for vector, matrix, operator and solver objects.
+
+\textit{Teuchos} is the collection of common and robust tools available to everything else in Trilinos. Teuchos provides templated access to BLAS and LAPACK; parameter lists which can be used to communicate with any package that takes those parameters (i.e. can be generically reused); memory management tools; traits (I don't understand what this section is talking about); operation counts; exception handling; and timers. 
+
+\begin{flushleft}
+\underline{Interoperability}
+\end{flushleft}
+These are the things that everything must do to be part of Trilinos, i.e. what allows all the independent things to work together: 
+\begin{enumerate}
+\item Accepts user data as Epetra objects
+\item Callable via TSF interfaces
+\item Can use Epetra internally
+\item Accesses services via TSF interface
+\item Builds under Trilinos configure scripts
+\end{enumerate}
+
+\begin{flushleft}
+\underline{Current Packages}
+
+1) the Petra Object Model (see above). 
+\\
+2) TSF (see above).
+ \\
+3) AztecOO: Solves $AX = b$ and can use preconditioning. The user, or other packages/libraries, provide the linear operator matrix A and an optional preconditioning matrix M along with initial conditions and the right hand side B. AztecOO provides scalings, parallel domain decomposition preconditioners, and a robust set of Krylov methods. An AztecOO solver can be used as a preconditioner to another AztecOO object.
+\\
+4) Belos: A collection of standard Krylov solvers like Conjugate Gradient, GMRES, Bi-CGSTAB along with flexible and block versions of these algorithms. 
+\\
+5) Amesos: Provides an interface to third-party direct sparse solvers SuperLU, SuperLUDist, Kundert's Sparse solver, DSCPack, UMFPack, and MUMPS.
+\\
+6) Komplex: Takes a complex-valued linear system, splits it into real and imaginary parts, reformulates it into a 2x2 block, and solves it with one of the solvers designed for standard real systems. This essentially handles the complex case by making it into a non-special case. 
+\\
+7) lfpack: Provides local incomplete factorization preconditioners in a parallel domain decomposition framework. It has a large variety of ILU preconditioners, a relaxed ILUK preconditioner, and an incomplete Cholesky with threshold dropping.
+\\
+8) ML: A multigrid (i.e. multi-level) preconditioner package with 3 approaches of interest: algebraic smoothed aggregation, adaptive grid and two-grid. ML can provide its own smoothers and iterative methods, or it can be used as a preconditioner for other methods. 
+\\
+9) Meros: Provides segregated/block preconditioners for fully-coupled Navier-Stokes problems or other problems with the same underlying physics structure. 
+\\
+10) NOX: A suite of nonlinear solver methods. This contains basic solvers like Newton's method as well as line search (full step, backtracking, polynomial, and More-Thuente) and trust region algorithms. NOX needs a Vector class to do basic vector operations and a Group class to do non-vector linear algebra, evaluate the function, and possibly evaluate the Jacobian. The Vector and Group can be provided by the user, or NOX has LAPACK, Epetra and PETSc built in. 
+\\
+11) LOCA: An extension to NOX that has scalable continuation and bifurcation analysis algorithms. It also provides an interface to Anasazi (see below). 
+\\
+12) Anasazi: A framework for large-scale eigenvalue algorithms. Those initially available are block implicitly restarted Arnoldi and Lanczos methods and preconditioned eigensolvers.
+\end{flushleft}
+
+\end{document}

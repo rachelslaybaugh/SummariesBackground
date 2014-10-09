@@ -1,0 +1,128 @@
+\documentclass[12pt,twoside]{book}
+\usepackage[letterpaper, textwidth=6.5in, textheight=9in]{geometry}
+\usepackage{amsmath}
+\date{\today}
+\newcommand{\ve}[1]{\ensuremath{\mathbf{#1}}}
+\title{Literature Review}
+\author{Rachel Slaybaugh}
+\begin{document}
+%-----------------------------------------------
+\maketitle
+This generally superceeds the MethodsNotes file, but some info is in there as well that is different from what is in here. The Multigrid file is also useful and not in here. 
+
+\section{Many papers, most of this is in Mendeley}
+\begin{enumerate}
+   \item \emph{The Inverse Power Method for Calculation of Multiplication Factors}, E. J. Allen, R. M. Berry (2002). 
+
+This paper compares the power method with the inverse power method for 1D (plane), isotropic, DD, 1-group transport problems. It finds the inverse method is faster if a good estimate of $k$ is available. They say this can be extended to mutli-D and mutli-group.
+
+power it: $\ve{A}\phi^i = \ve{B}\phi^{i-1}$. $\ve{A}$ is transport-interaction: leakage, scattering, etc. $\ve{B}$ is the fission matrix. Solve at each step with some efficient method for sparse linear systems. Solve until $\frac{\phi^i}{\phi^{i-1}}$ approach $k$. This is the same as $\ve{C} = \ve{A}^{-1}\ve{B}$; $\phi^i = \ve{C}\phi^{i-1}$.
+
+Inv power it: if there is a good guess $\gamma \approx k$, then do $\phi^i = (-\ve{C} + \gamma\ve{I})^{-1}\phi^{i-1}$. Actually solve $(\ve{A} - \frac{1}{\gamma}\ve{B})x^i = \frac{1}{\gamma}\ve{A}\phi^{i-1}$; $\phi^i = \frac{x^i}{||x^i||}$.
+
+for the prob described $\ve{A}$ is diagonally dominant and has a positive diag elems and nonpos off diag with a small enough $h$ (spacing). All entries of $\ve{B}$ are nonneg.
+
+   \item\emph{Krylov Sub-space Methods for K-eigenvalue Problem in 3-D Neutron Transport}, A. Gupta, R. S. Modak (2004).
+
+Fundamental mode is usually found with power iteration. 3D, multigroup, isotropic neutron transport; $S_N$, finite-differencing, DD. Inspired by DE work of Suetomi.
+They compare power iteration and a matrix free implementation of the Krylov solver ORTHOMIN(1). The within-group iterations over the self-scattering source are intermediate iterations. They accelerate the within-group solves with conjugate gradient.
+
+Power it: repeated solution of a fixed source within-group problem - the mesh-angle sweep solves this in each group. Fission source and e-val are updated after each outer iteration. A and B aren't formed, non-symmetric for multigroup.
+
+ORTHOMIN(1): this is an iterative method that successively improves $x$ and then $\rho(x)$ to do the general calculation $r = \rho(x)\ve{B}x - \ve{A}x$; $\rho(x) = \frac{(\ve{A}x,\ve{B}x)}{(\ve{B}x,\ve{B}x)}$. $\ve{A}x = \rho(x)\ve{B}x$. $\rho$ tends toward eval and $x$ tends toward evec. This can be applied to the whole problem at once (doesn't have inner and outer iteration levels), but that requires forming $\ve{A}$ and $\ve{B}$.
+
+In this work, they change the implementation to be matrix-free such that there are inner and outer iterations again. They apply orthomin to $\ve{P}f = kf$, $\ve{P}$ is the fission matrix and $f$ is the fission evec (source densities rather than group fluxes), $k$ is the mult factor (eval). They don't form $\ve{P}$, but use its action. It's much smaller than $\ve{A}$. They use it as the outer iteration method.
+
+Inner iterations are source iterations (within group where q has scattering from other groups, fission/external source). Often accelerated with DSA or TSA. Can solve the T part of TSA (if iso scattering) with CG. They do this for 3d (previously done in 1 and 2D by Gupta and Modak).
+
+You could use CG instead of SI without TSA, but only if there won't be any negative fluxes b/c CG can give negative flux. Choosing how tightly to converge inner iterations is tough to determine. TSA(CG) was faster than SI for inners; orthomin(1) is faster than PI for outers. Two test probs, one lwr one hwr.
+
+\item\emph{Matrix-Type Multiple Reciprocity Method Applied to the Modified Helmholtz Neutron Flux Mode in Nuclear Criticality System}, Masafumi Itagaki (2002).
+
+  applies a modified multiple reciprocity boundary element method (MRBEM) to the helmholtz form of the 2-group diffusion eqation, handles strong absorption. They apply wieland'ts method somehow.
+
+  I didn't take the time to completely understand the math and what's really going on here. 
+
+\item\emph{Three-Dimensional Multiple Reciprocity Boundary Element Method for One-Group Neutron Diffusion Eigenvale Computations}, Masafumi Itagaki, Naoki Sahashi (1996).
+
+Prelude to 2002 Itagaki paper. 1-group diffusion, multiple reciprocity boundary element method - can capture lots of funny flux shapes. Use wielandts method, hard to extend to multigroup. again I didn't investigate the math fully.
+
+  \item \emph{Application of Preconditioned Conjugate Gradient Method to Eigenvalue Problems for One-Group Neutron Diffusion Equation}, Eiichi Suetomi, Hiroshi Sekimoto (1988). 
+
+They look at 2D, 1-group diffusion. The compare power it with CG precond'd Rayleigh Quotient Minimization method (RQM). They only consider symmetric $\ve{A}$ for the problem $\ve{A}\phi = \lambda \ve{F}\phi$. $\ve{A}$ has $-\nabla\cdot(\ve{D}\nabla\phi)$ and absorption, $\ve{F}$ is the diagonal fission source term.
+
+Power iteration is often used to solve the diffusion equation. It consists of an inner iteration (solving linear systems) and an outer iteration (calculation of source and eigenvalue). This can be expensive.
+
+They use the RQ to find stationary points by minimization techniques. The convergence depends on $cond(\ve{A})$. They precondition with $\ve{U}^T\ve{DU} \approx \ve{A}$. First they use an incomplete Choleski decomp, and then a modified IC. U is upper triangular with same sparsity pattern as A. D is diagonal and is the inverse of the diagonal of U. 
+
+They use precond'd quantities in the Rayleigh Quotient and put it into the CG method. They give the CG algorithm. They get great results with MIC + CG.
+
+Punchline: they use incomplete factorization to precondition a Krylov method for symmetric, 2D, 1-group neutron diffusion for the k-eigenvalue problem. 
+
+\item \emph{Variational acceleration for Subspace Iteration Method. Application to nuclear power reactors}, V. Vidal, G. Verdú, D. Ginestar, J. L. Muñoz-Cobo (1998).
+
+  They solve the multigroup, downscattering only, nodal collocation in space, diffusion equation with the goal of finding several dominant subcritical eigenmodes. They start with $\ve{L}\phi = \frac{1}{\lambda}\ve{M}\phi$ and then set $\ve{A} = \ve{L}^{-1}\ve{M}$ to get $\ve{A}x = \lambda x$. $\ve{L}$ is block symmetric.
+
+  Subspace method: generalization of power method. Examine a Rayleigh-Ritz projection (RR) and a symmetric RR. They base the solution method on solving the linear system $\ve{L}y = \ve{M}x$ by doing block sweeps which they solve using some iterative method such as CG with a Jacobi preconditioner: $\ve{L}_{11}y_1 = b_1$, then for $i=2,G$ solve $\ve{L}_{ii}y_i = b_i - \sum_{j=1}^{i-1}\ve{L}_{ij}y_j$ (note that $b = \ve{M}x$).
+
+  For each other iteration (until convergence) they solve the linear system just described, get an approximation for $\ve{X}^k$, orthonormalize it to get $\ve{X}^{k+1}$, compute an RR projection ($\hat{\ve{A}}^{k+1} = (\ve{X}^{k+1})^T \ve{AX}^{k+1}$). Then the solve the eigenvalue problem with $\hat{\ve{A}}^{k+1}$ to get a new estimate for the evecs. The symmetric version follows a similar process.
+
+  Variational acceleration is added, based on the fact that the evals are real. They start with an expansion that is from variational principles; the expansion has a real and imaginary part; because the imaginary part must be zero they set up equations to minimize those terms. This is a system of non-linear normal equations they solve with a few iterations of the Newton-Raphson method. Somehow they use these approx solutions to find new search directions. It is totally unclear to me how that works. They are somehow solving the normal equations and finding extrapolation factors that are from the original variational expansion that gives the new approximation for $x$.
+
+  The variational method provides some speedup and the symmetric version is better if the \# of evals needed is small. 
+
+\item \emph{The Implicit Restarted Arnoldi Method, an Efficient Alternative to Solve the Neutron Diffusion Equation}, G. Verdu, R. Miro, D. Ginestar, V. Vidal (1999).
+
+  This simply builds on the 1998 Vidal paper. It compares the two methods described there for multigroup neutron diffusion with the implicitly restarted Arnoldi method developed by Sorensen and adapted by them for the DE.
+
+  They found that IRA is better than the subspace methods. The subspace iteration worsens as the eigenvalues of $\ve{A}$ become degenerate (that is the second, third, etc. become closer together). IRA is not affected by this. They implemented everything in parallel.
+
+\item \emph{Eigenvalues Calculation Algorithms for Lambda-modes Determination. Parallelization Approach}, V. Vidal, G. Verdú, D. Ginestar, J. L. Muñoz-Cobo (1997).
+
+This is exactly what is presented in the Vidal 1998 paper and the Verdu 1999 paper except that the comparison is with Arnoldi instead of IRA. They go through the parallelization in detail here.
+
+\item \emph{Krylov Subspace Iterations for Deterministic k-Eigenvalue Calculations}, James S Warsa, Todd A Wareing, Jim E Morel, John M McGhee, Richard B Lehoucq (2004).
+
+  The 3D, multigroup, LD $S_N$ transport equation on unstructured tet-mesh with upscattering is solved with IRAM and compared with power it. They focus on the ability to find a few eigenmodes. First app of Krylov to k-eval for large scale, 3D, TE. Can be applied to sym and nonsym problems.
+  
+  They begin with this form of the problem: $\ve{L}\psi = \ve{MSD}\psi + \frac{1}{k}\ve{FD}\psi$; $\psi^l = \ve{D}\psi^l$. $\ve{L}, \ve{M}, \ve{D}$ are block diagonal. Each block corresponds to a group. They lay out power iteration and mention that the RQ can be a good estimate: $k^{l+1} = \frac{(\ve{A}\phi^l, \phi^l)}{(\phi^l, \phi^l)}$; $\ve{A} = \ve{D}(\ve{L} - \ve{MSD})^{-1}\ve{F}$. Power it can be accelerated, but it is difficult to this robustly or consistently for non-spd cases.
+  
+  They use the IRAM found in ARPACK b/c it is well suited for matrices that are either sparse or not formed and it can be wrapped around existing power it.
+  
+  Subspace iteration is like applying power iteration (requiring only the action of the operator $\ve{A}$) to $p$ vectors simultaneously, they would all converge to the dominant evec. However, if these vectors have been made orthonormal then the will converge to $p$ eigenvectors corresponding to the $p$ largest eigenvalues.
+  
+  Another way to think of this is taking advantage of more information to find a better answer. To do this make the starting vector a linear combination of eigenvectors of the operator. The coefficients used in the combination will evolve in a predictable way through repeated application of the operator. This pattern is used to inform the solution.
+  
+  Arnoldi combines these ideas by constructing a subspace from the vector sequence generated by the power method. An epair is found by projecting a vector onto that subspace using a Galerkin condition $(w, \ve{A}x - \lambda x) = 0$ for all $w \in \mathcal{K}_m$.
+  
+  There are more details in here about restarting Arnoldi and how IRAM converges.  
+  
+  For downscattering only, forward sub is used where an inner iteration is used to solve each group - either using source iteration or a Krylov method. If there is upscattering, intermediate upscatter iterations required which degrade the performance of IRAM. The action of $(\ve{L} - \ve{MSD})^{-1}$ is usually thought of as the outer iteration for power iteration, but here it must be computed for every IRAM iteration making it intermediate. They say they compute this either with a block Gauss Seidel or a Krylov method.
+  
+  Power it uses DSA-accelerated source it for the inners. For their ARPACK calcs the inners are solved with Krylov, preconditioned with DSA. CG is the DSA solver. Sometimes they initialize IRAM with a few its of power it. In both cases they look at a krylov subspace size for arnolid of either 5 or 10 (5 or 10 before restarting).  
+  
+  Prob 1: dom ratio near 1, 5-group x-secs, down only. IRAM used flexible (F)GMRES(10) for inners. IRAM convergence is only mildly sensitive to dominance ratio; initing with power it is beneficial. Also, for power it the eval converges much more quickly than the evec.
+  
+  Prob 2: C5G7 benchmark, is a MOX reactor, 7-group isotropic x-secs, down only and up are solved, $S_4$ Cheb-Legendre quad. IRAM inners solved with BiCGSTAB. For down only dom ratio is 0.985 and is 0.987 with upscatter. For upscatter BiCGSTAB was precond'd with DSA. All they say is that the down only groups are solved with forward sub and the upscatter groups are solved iteratively. In practice they tried both Gauss Seidel and FGMRES(20) with FGMRES(20) being much faster. They needed a large number of intermediate upscatter iterations to get convergence.
+  
+  Note: They still do inners, then Krylov for the outer. We just do one iteration set - that's the difference. I think they implemented it this way because it used their existing code implementation. Why hasn't anyone done what we've done before?
+  
+  They solved this serially, but say they could do it in parallel. They think their conclusions would be the same in parallel, but they don't actually know.  They site the inability to handle upscatter well as a big drawback.
+
+\item \emph{Calculation of the Eigenfunctions of the Two-Group Neutron Diffusion Equation and Application to Modal Decomposition of BWR Instabilities}, F. Zinzani, C. Demaziere, C. Sunde (2008).
+
+  2-group diffusion is solved for several eigenmodes. They compare a power method, modified to find multiple evecs, and an explicitly restarted Arnoldi method. They look at both the forward and adjoint methods. They note that for diffusion Wielandt's method and the Arnoldi method are the two solutions of choice. Wielandt is good if you have a good guess for the eval of interest. With DE the first few evals are often clustered, so it's still hard to find the dominant one (all are close to the shift). There's a pretty good explanation of power iteration and how it works.
+
+  Arnoldi takes advantage of the fact that useful information that was created in power it and discarded can instead be saved, orthogonalized, and used. The first $m$ evals and evecs are stored matrices and used to inform the next iteration.
+
+  They start with $\ve{M}\phi = \frac{1}{k}\ve{F}\phi$. The goal is to solve $y = \ve{F}x$ and then $\ve{M}z = y$. They start by reordering $\ve{M}$ with Approximate Minimum Degree (AMD) ordering, then they factor it: $\ve{LU} = \ve{PMQ}$. $\ve{P}, \ve{Q}$ are unitary and are used by AMD to permute $\ve{M}$ so that $\ve{L}$ and $\ve{U}$ are sparse. Then they use forward and back sub to do $z = \ve{Q}(\ve{U}(\ve{L}(\ve{P}(\ve{F}x))))$.
+
+  All that means they handle both groups at once with AMD + LU factorization. To find more than one evec, after they find each most dominant evec they remove the fission contribution from that mode and then use power it to find the next mode. Their motivation for doing it this way is that they already have a code that does power iteration and this requires the least modification (they only change the vector they're iteration on, not the iteration scheme itself). An algo is given on pg. 2113.
+
+  Note, in Arnoldi the storage for $\ve{V}$ is $O(n \times m)$and for $\ve{H}$ is $O(m \times m)$, so restarts are needed. To restart they make a new initial guess from a linear combination of the previous evecs.
+
+
+
+\end{enumerate}
+
+\end{document}

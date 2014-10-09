@@ -1,0 +1,44 @@
+\documentclass[12pt,twoside]{article}
+\date{\today}
+\title{Topic Search Study}
+\author{Rachel Slaybaugh}
+\begin{document}
+\maketitle
+
+This is a working guide that lists some summarizing comments about papers I've read as I search for a PhD topic. It further attempts to synthesize some ideas that are of potential future interest.
+
+\section{Paper Summaries}
+
+\begin{enumerate}
+\item A New Paradigm for Local-Global... E.E. Lewis: \\
+Right now we homogenize fuel assemblies to do full core neutronics analysis, and we get reasonable results. With new fuel types, like MOX, this may no longer be sufficient. However, doing a full system analysis without homogenization is very costly. This paper describes a method where the coupling between nodes is reduced by introducing reflecting conditions for the higher order spherical harmonics, thus reducing the dimension of the response matrix. This was applied for both differential and integral forms of the TE and gave good speedup. The future work proposed is to parallelize the response matrix formation so the entire thing can be parallelized. The goal is to make this fast enough so as to be practical for real problems and thus to avoid homogenization of fuel assemblies.
+
+\item Direct Diffusion Monte Carlo: \\
+\begin{itemize}
+\item This method solves the diffusion equation in optically thick regions and uses Monte Carlo in optically thin regions. The particles flow from cell to cell being transformed from one type to the other when crossing solver boundaries. DDMC has been applied to gray systems in up to two dimensions (as far as I can tell).
+\item DDMC has the ability to use both Marshak boundary conditions and asymptotically correct angular distributions at the diffusion-MC interfaces. The asymptotically correct is much better for non-isotropic systems.
+\item Both boundary conditions can be used with standard cartesian adaptive mesh refinement. 
+\item DDMC can estimate radiation momentum deposition with relatively good accuracy.
+\item Future work: \\ * apply to non-gray, \\ * extend to 3-D, \\ * automatically identify which regions should be solved with diffusion and which should be solved with MC, \\ * non-cartesian mesh? \\ * variance reduction taking into account radiation (discuss with Milad for ellaboration)?
+\end{itemize}
+
+\item Application of hp Adaptivity... Wang and Ragusa: \\
+They give algorithms and develop a method of error analysis for hp adaptivity. They give two versions - one performed on the inner iteration and one wrapped around the outer loop. They discuss how to couple energy groups, extend to multi-D, and go over how to deal with irregularities in the mesh. They also develop a goal oriented analysis that uses the adjoint to do importance function weighting. They found that 1-D was great, but multi-D was not always better than h adaptivity alone. This may be because there are so many refinement options that determining the optimal one is slow enough not to be (comparatively) worth it. Future work: redefine the error metric to help cheapen how to choose the optimal refinement; figure out how to identify where the solution is smooth and where it isn't a priori so that it is easy (inexpensive) to decide between h and p refinement where it is clear. 
+
+\item On the Convergence of DGFEM... Wang and Ragusa: \\
+They numerically verified the theoretical convergence for discontinuous galerkin finite element method 
+(DGFEM) for several cases using both the 2-norm and the DG-norm. They related their results on an adaptive mesh to optical thickness, and the alignment between the incoming source and the mesh for both absorbing and scattering systems. No future work is really identified. This paper basically does error analysis and categorizes results based on both math properties and physics. 
+\end{enumerate}
+
+%----------------------------------------------------------------------------------------------------------
+\section{Thoughts}
+The ideas that seem cool in here mostly come from DDMC, though I also like the Ragusa plan of identifying solution smoothness to pick between h and p adaptivity so the algorithm becomes better in multi-D. I don't know what the status of all the DDMC stuff is; I would like to talk to this group at the ANS meeting. \\
+
+The general ideas in which I am interested group around using physical characteristics of a problem to inform the solution. It seems there are a handful of ways this can be done. One way is identifying solution characteristics at the outset and basing the actual solution on that. This is demonstrated by 1) knowing where to do h vs. p adaptivity based on the anticipated solution form; 2) knowing where to use diffusion vs. MC based on the optical thickness of a problem. \\
+
+Another way comes out of the JFNK paper (not described here as it is a survey paper) and is using physics to inform what preconditioners to use for a given problem. It seems for JFNK-type methods selecting the ``right`` preconditioner is really important. \\
+
+Finally, we also talked about selecting regions to use general solver types, and then being able to plug in specific solvers as deemed appropriate. This is an expansion of the basic DDMC idea. Regions could be identified that would be good for MC, and other regions would be good for SN or MOC, etc. We would have to figure out if we would want to automate this somehow. The big new thing (I think) here would be making the interface very flexible because it would be built into the geometry tool so there would be a lot of flexibility in choosing where to use what. The idea needs some fleshing out and refinement, but based on what I've been reading it at least seems pretty pertinent and useful. 
+
+
+\end{document}

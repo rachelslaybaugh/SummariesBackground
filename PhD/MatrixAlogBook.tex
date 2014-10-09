@@ -1,0 +1,319 @@
+\documentclass[12pt,twoside]{article}
+\usepackage[letterpaper, textwidth=6.5in, textheight=9in]{geometry}
+\usepackage{amsmath}
+\date{\today}
+
+\newcommand{\evall}{eigenvalue}
+\newcommand{\evalsl}{eigenvalues}
+\newcommand{\evecc}{eigenvector}
+\newcommand{\evecsc}{eigenvectors}
+\newcommand{\eval}{eigenvalue }
+\newcommand{\evals}{eigenvalues }
+\newcommand{\evec}{eigenvector }
+\newcommand{\evecs}{eigenvectors }
+\newcommand{\cl}[1]{\ensuremath{\mathcal{#1}}}
+\newcommand{\ve}[1]{\ensuremath{\mathbf{#1}}}
+\newcommand{\epair}{eigenpair }
+\newcommand{\espace}{eigenspace }
+
+\title{Notes on Matrix Algorithms: Eigensystems book}
+\author{Rachel Slaybaugh}
+\begin{document}
+%-----------------------------------------------
+\maketitle
+\section{Eigensystems}
+\subsection{Algebra}
+Unless otherwise stated, $A$ is a complex matrix of order $n$. $\bar{A}$ is the conjugate, $A^{T}$ is the transpose, and $A^{H}$ is the conjugate transpose. The pair $(\lambda, x)$ is an eigenpair of $A$ if $x \ne 0$ and $Ax = \lambda x$. The multiset of eigenvalues of $A$ is call the spectrum of $A$, $\Lambda(A)$. If $\tau \ne 0$ then $(\lambda, \tau x)$ is also an eigenpair of $A$.
+
+$x$ is a direction which remains invariant under multiplication by $A$. The corresponding $\lambda$ is the representation of $A$ is the subspaced spanned by $x$. This also means that $A^{k}x = \lambda^{k}x$ because multiplication by $A$ is simply a scalar operation along the eigenvector. 
+
+We can say $Ax=\lambda x \to (\lambda I - A)x = 0$. Because $x$ is nonzero, $(\lambda I - A)$ must be singular and this in only the case when $p_{A}(\lambda) \equiv det(\lambda I - A) = 0$. $p_{A}(\lambda) = (\lambda - \lambda_{1})^{m_{1}} (\lambda - \lambda_{2})^{m_{2}}\cdots (\lambda - \lambda_{k})^{m_{k}} $ is called the characteristic polynomial of $A$. Note that $\lambda_{i}$ are distinct and $m_{1} + m_{2} + \cdots + m_{k} = n$. Every eigenvalue has both a left and right eigenvector. 
+
+Sometimes real matrices give imaginary \evalsl. Complex \evals always occur in conjugate pairs of equal algebraic multiplicity; if $(\lambda, x)$ is a pair, so is $(\bar{\lambda}, \bar{x})$. The real and imaginary parts of $x$ are linearly independent. Note, the geometric multiplicity of an \eval is the dimension of the subspace spanned by it's \evecc, or null($\lambda I - A$). A matrix is defective if it has at least one defective \evall, that is an \eval with geometric $<$ algebraic multiplicity. In this case the matrix does not have a complete set of \evecs and the defective \evals are sensitive to perturbation. 
+
+If $U$ is nonsingular then $B = U^{-1}AU$ is similar to $A$. $A$ and $B$ have the same eigenvalues and if $(\lambda, x)$ goes with $A$ then $(\lambda, U^{-1}x)$ goes with $B$. A matrix is nilpotent if its \evals are all zero and this means $A^n = 0$. If $A$ is Hermitian it has real \evals and a complete orthonormal system of \evecsc. 
+
+The Schur decompotion of $A$ can be written as $A = UTU^*$, where $U$ is a unitary matrix and $T$ is upper triangular. The decomposition is not unique. The eigenvalues of $A$ are the diagonal elements of $T$. The columns of $U$ are called Schur vectors. The Schur vectors can be related to the eigenvectors contained in a matrix $X$ (where $X^{-1}AX = \Lambda$) by letting $X = UR$ be the QR decomposition of $X$. Then we see $U^{H}AU = R\Lambda R^{-1}$. This means the Schur vectors are the columns of the Q-factor of the matrix of eigenvectors (in the correct order).
+
+Sylvester's equation (pg 16 and 17) gives a different way of thinking about how a shifted eigenvalue solution works and why. This basically says if we are trying to solve $AX - XB = C$, let \ve{S}$X = AX - XB$ be the Sylvester operator ($A$ and $B$ are square of order $n$ and $m$ respectively). We can restate this as $\ve{S}X = \sigma X$ where $(\sigma, X)$ is an eigenpair of \ve{S}. Now $(A - \sigma I)X - XB = 0$. This is only true if there is a $\lambda \in \Lambda(A)$ and a $\mu \in \Lambda(B)$ such that $\sigma = \lambda - \mu$ which means $(\lambda - \mu) \in \Lambda(\ve{S})$. 
+
+\subsection{Analytic Properties}
+Properties of norms:
+\begin{enumerate}
+  \item $A \ne 0 \Longrightarrow ||A|| > 0$,
+  \item $||\mu A|| = |\mu| ||A||$,
+  \item $||A + B|| \le ||A|| + ||B||$. This is called the triangle inequality. An equivalent form is $||A - B|| \ge ||A|| - ||B||$.
+\end{enumerate}
+There are useful definitions and properties about different norms in here, particularly the 2-norm. In general, a small normwise relative error only guarantees a similar relative error in the largest elements of a matrix. 
+
+The spectral radius is $\rho(A) \equiv \max_{\lambda \in \Lambda(A)} |\lambda|$. The $(\lambda,x)$ pair is the dominant eigenpair. Further, $\rho(A) \le ||A||$. Interestingly, for any $\epsilon > 0$ there is a consistent norm (defined on pg. 29), $||\cdot||_{A,\epsilon}$ such that $||A||_{A,\epsilon} \le \rho(A) + \epsilon$. This means the spectral radius can be approximated to arbitrary accuracy by some consistent norm.
+
+\subsection{Perturbation Theory}
+Fischer Theorem: let the Hermitian matrix $A$ have \evals $\lambda_1 \ge \lambda_2 \ge \cdots \ge \lambda_n$. Then for $w \in \mathcal{W}, ||w||_2=1$:
+%
+\begin{align}
+  \lambda_i &= \min_{dim(\mathcal{W})=n-i+1} \max_{w} w^H A w \text{  and} \\
+  \lambda_i &= \max_{dim(\mathcal{W})=i} \min_{w} w^H A w \:.
+\end{align}
+
+Define $sep(\lambda, M) = ||(\lambda I - M)^{-1}||^{-1}$. This is a lower bound on the separation of $\lambda$ from the spectra of $M$, meaning $sep(\lambda, M) \le \min_{\mu \in \Lambda(M)} |\lambda - \mu|$. If $M$ is Hermitian, then the last statement has equality. There is lots of info about perturbation in this subsection, but none of it seems relevant at this time. 
+
+%---------------------------------------------------------------------------------------
+\section{The QR Algorithm}
+The reason this section is important: The Arnoldi method is a truncation of the reduction of $A$ to Hessenberg form using a shifted QR-iteration. Understandthing this should give insight into the Arnoldi method and eventually Krylov methods. 
+
+\subsection{Power and Inverse Power Methods}
+There is guidance in here on selecting a starting vector for the power method (pg.60). 
+
+Concerning convergence, let the residual be $r = Av - \mu v$. Then there is a matrix $E = \frac{rv^H}{||v||_2^2}$ such that $\frac{||E||_p}{||A||_p} = \frac{||r||_2}{||A||_p||v||_2}, p = 2,F$ and $(A-E)v = \mu v$. A natural idea is to strive to choose a $\mu$ that will minimize the residual. The $||r||_2$ is minimized when $\mu$ is taken to be the Rayleigh Quotient (R.q.); in this case $r \perp v$. Pg. 63 has a proof of this result. 
+
+For $v^H u \ne 0$, define the R.q. as $\frac{v^H Au}{v^H u}$. If either $u$ or $v$ are \evecs corresponding to an \evall, $\lambda$ of $A$, then the R.q. reproduces this \evall. Similarly, if $u$ or $v$ are near and \evec, the R.q. will approximate $\lambda$. 
+
+An example of shifting being effective: If $A$ has \evals 1, 0, and -0.99, it will converge at a rate of 0.99. If we use a shift of 0.5, the \evals become 1.5, 0.5, and -0.49 and the convergence rate becomes 1/3. There is also discussion of rounding error in here. 
+
+When a shift and invert is applied the \evals of $A$ become 
+%
+\begin{equation}
+  \mu_1 = \frac{1}{\lambda_1 - \kappa}\text{,   }  \mu_2 = \frac{1}{\lambda_2 - \kappa}\text{,   } \cdots\text{,   }  \mu_n = \frac{1}{\lambda_n - \kappa} \:.
+\end{equation}
+%
+As $\kappa \to \lambda_1$, $\mu_1 \to \infty$ and all the other $\mu$s go to finite quantities. Thus, choosing a $\kappa$ near $\lambda_1$ we make $\mu_1$ the dominant \evall, and the dominance can be made as large as we like. Some rounding error analysis of inverse iteration is given. By setting $\kappa$ to be the R.q. at each iteration we are optimizing our shift on every iteration, and this is called RQI. The notes section has some good information. 
+
+\subsection{Explicitly Shifted QR}
+The explicitly shifted QR algorithm is:
+\begin{enumerate}
+  \item Choose a shift $\kappa_k$
+  \item Factor $A_k - \kappa_k I = Q_k R_k$ where $Q$ is orthogonal and $R$ is upper triangular
+  \item $A_{k+1} = R_kQ_k + \kappa_k I.$
+\end{enumerate}
+
+Explicitly shifted QR is a variant of the power method and implements the inverse power method. A step of the QR algorithm can be thought of as a deflation step (if you know one eigenpair, you can use a deflation technique to reduce the size of the eigenvalue problem by removing the known eigenpair). The Schur decomposition allows this to happen because with the right choice of $U$ the diagonal elements of $T$ can be made to appear in any order where $U^HAU=T$. See proof on pg. 11 for more info. 
+
+Let $Q$ be unitary and $Q = (Q_* q)$, then we can write
+\begin{equation}
+  Q^HAQ = \begin{pmatrix} Q^HAQ_* & Q^HAq \\ q^HAQ_* & q^HAq \end{pmatrix} \equiv 
+          \begin{pmatrix}  B & h \\ g^H & \mu \end{pmatrix} \:.
+\end{equation}
+If we choose $q$ to be an approximate \evec then $g^H$ will be small and $\mu$ will be an approximate \eval of $A$; $(\mu, e_n)$ is an approximate left eigenpair whose residual norm is $||g||_2$. In this case $\mu$ is the Rayleigh Quotient, $e^T_n A e_n$. Error bounds can be derived and convergence can be discussed. For a simple eigenvalue, the method is at least quadratic. If $A$ is Hermitian, then the method is cubic. If $\lambda$ is nondefective, the convergence is quadratic. Otherwise it may be only linear. All of this assumes the original shift is sufficiently near an \eval of $A$. There is no global convergence analysis. 
+
+\emph{Unshifted} If we use a shift of zero, then the QR algorithm gives the same result as the power method. This also triangularizes $A$ where $Q$ goes to the orthogonal part of the Schur decomposition and $A$ goes to the triangular part. If there are defective \evalsl, this can be block triangular. You also get similar convergence rate information. 
+
+\emph{Hessenberg form}
+The QR algorithm requires at least one QR decomposition which requires $O(n^3)$ flops. When put into the algorithm this escalates to $O(n^4)$. To mitigate this, $A$ is first reduced to upper Hessenberg form and the algorithm then only needs $O(n^3)$. Householder transformations are typically used for the reduction. The Householder transformation is a matrix of the form $H = I - u u^H$ where $||u||_2 = \sqrt{2}$. When applied to $A$ this becomes $HA = ( I - u u^H)A = A - u(u^H A)$. If we properly scale $A$, this all works out rather well. This effectively does the following where $A$ is replaced with $HA$:
+\begin{enumerate}
+  \item $v^H = u^H A$
+  \item $A = A-uv^H$.
+\end{enumerate}
+The algorithm can be implemented such that the vectors generating the transformation are saved as the process progresses.
+
+Givens rotation is a plane rotation that is used to introduce zeros into a matrix. On a two vector, the matrix is $P = \begin{pmatrix} c & s \\ -\bar{s} & \bar{c} \end{pmatrix}$, where $|c|^2 + |s|^2 = 1$. For a larger vector the matrix is the identity matrix with a plane rotation embedded in the submatrix corresponding to the rows and columns ($i$ and $j$, respectively) where change is desired. We must choose appropriate $c$s and $s$s, then with left application all of the entries in the original matrix $X$ are left unchanged except that we can introduce zeros anywhere in the $ith$ or $jth$ row. With right application an entry in the $ith$ or $jth$ column can be converted. The algorithm and some comments are on pg.s 89/90. 
+
+Hessenberg matrices are invariant under a QR step. The QR algorithm is essentially applying plane rotations to a Hesseberg matrix that gets back to a Hessenberg matrix. 
+
+\emph{Explicitly Shifted Algorithm:}
+One of the first steps is to identify if there are negligible subdiagonal elements. If there are, the Hessenberg matrix is deflated appropriately. This leaves two cases of interest: the first is finding the \evals of $A$, the second is computing a Schur decomposition of $A$. The goal selected determines which elements must be transformed in the remainder of the algorithm. Back searching is done to find the range of rows over which the QR algorithm is to be applied: $i1$ to $i2$. Next a shift is chosen. If the \evals are known to be real, the R.q. can be the shift. However, if there will be complex \evalsl, a Wilkinson shift is used (pg. 97). Algorithms for converting a Hessenberg matrix and a general matrix to Schur form are given.
+
+Once we have a Schur decomposition of the form $A = QTQ^H$, we can get the right \evecs of $A$ if they are needed (recall that the \evals are already known). We know that the matrix of right \evecs for $T$ is $X$. Once we find $X$ we know the right \evecs for $A$ are $QX$. A similar algorithm could be used to compute just a few \evecsc, or the left \evecsc. 
+
+\emph{Speedup Techniques}
+There are several ways the QR algorithm can be made faster. If there is trouble with convergence the shift can be changed and the process repeated; this is called using an ad hoc shift. There are also some short cuts if deflation isn't working quite well enough. Ideas about how to cheaply get \evals out of highly structured matrices, thereby accelerating the deflation process, are also mentioned. A balancing scheme can be used to get elements of a matrix to be closer in magnitude if, for example, bad units were chosen that makes the matrix have a large range of element size. The balancing can improve accuracy and convergence, but it could make things worse. 
+
+\subsection{Implicitly Shifted QR}
+The explicitly shifted method is for general complex matrices. Even if real matrices are used, they may still have complex \evals and \evecs if the true Schur form is used. The implicit shifting method is for real matrices and gives an equivalent of the Schur form that is real and thus all arithmetic involved in the QR algorithm is real (much faster). In this section, $A$ is a \emph{real} matrix of order $n$. 
+
+\emph{Real Schur Form}
+There is an orthogonal matrix $U$ such that $T=U^TAU$ is block upper triangular. The diagonal blocks of $T$ are of order one or two; this is called being quasi-triangular. The blocks of order one contain the real \evals of $A$. The blocks of order two contain the pairs of complex conjugate \evals of $A$. The blocks may appear in any order. An inefficient preliminary algorithm is given that works for all real matrices. The idea is that there is an efficient algorithm for Hessenberg matrices that can be used instead. 
+
+Define $H$ as an unreduced upper Hessenberg matrix if $h_{i+1,1} \ne 0, (i = 1, 2, \cdots, n-1)$. Let $H = Q^HAQ$ be a unitary reduction of $A$ to upper Hessenberg form. If $H$ is unreduced then, up to column scaling of $Q$, the matrices $Q$ and $H$ are uniquely determined by the first column or the last column of $Q$. 
+The efficient version of the algorithm does a double implicit shift. The preliminary algorithm requires calculating $H^{2} - 2Re(\kappa)H + |\kappa|^{2}I$. The efficient algorithm basically reduces the cost of this calculation. They present an algorithm that should be easier to do, $O(n^{2})$, on pg. 118 eqn. 3.6. It is equivalent to doing two steps of the QR algorithm, the first with a complex Francis shift (whatever that is) $\kappa$ and the second with another shift $\bar{\kappa}$. Once the \evecs of the quasi-triangular matrix $T$ are known, they can be transformed to the \evecs of $A$ using $Q$. 
+
+\subsection{Generalized Eigenvalue Problem}
+The generalized \eval problem has the form $Ax = \lambda Bx$, as opposed to the ordinary \eval problem which has the form $Ax = \lambda x$. The generalized problem can have some different features such as infinite \evalsl. The QR algorithm can be adapted to handle this form, with the result being called the QZ algorithm. The development details are very similar to that of the QR algorithm. Notes on this section are left out for now as this has no impact on my research. 
+
+\section{The Symmetric Eigenvalue Problem}
+I chose to basically skip this chapter because it only deals with symmetric matrix problems, which are too restrictive for me. The only section which could be of interest is section 3 where singular value decomposition (SVD) is discussed. SVD is included here because the singular values of a real matrix, $X$, can be squared to get the \evals of a symmetric matrix $A = X^{T}X$. Some (very brief) information about SVD is given here.
+
+Let $X \in R^{n \times p}$ where $n \ge p$. Then there are orthogonal matrices $U$ and $V$ such that $U^{T}XV = \binom{\Sigma}{0}$ where $\Sigma = diag(\sigma_{1}, \sigma_{2}, \cdots, \sigma_{p})$ with $\sigma_{1} \ge \sigma_{2} \ge \cdots \ge \sigma_{p} \ge 0$. Notes: the $\sigma_{i}$ are called the singular values of $X$. The columns of $U(p \times n)$ and $V(n \times p)$ are called the right and left singular vectors of $X$, respectively. They satisfy $Xv_{i} = \sigma_{i}u_{i}$ and $X^{T}u_{i} = \sigma_{i}v_{i}$ for $i = 1, \cdots, p$. Further $X^{T}u_{i}=0$ for $i = p+1, \cdots, n$. $\sigma_{1} = ||X||_{2}$. The SVD is essentially unique. 
+
+%---------------------------------------------------------------------------------------
+\section{Eigenspaces and Their Approximation}
+Once matrices become large, other classes of algorithms are required because of storage issues. Most algorithms presented deal with approximating eigenspaces, and a subset of \evecs of interest are found. 
+
+\subsection{Eigenspaces}
+\emph{Definitions:} Let $A$ be of order $n$ and let $\mathcal{X}$ be a subspace of $C^n$. Then $\mathcal{X}$ is an eigenspace or invariant subspace of $A$ if $A\mathcal{X} \equiv \{Ax: x\in \mathcal{X}\} \subset \mathcal{X}$. 
+
+Let $X$ be a basis for $\mathcal{X}$, then there is a unique matrix $L$ such that $AX = XL$. We say that $L$ is the representation of $A$ on the eigenspace $\mathcal{X}$ with respect to basis $X$. If $(\lambda,x)$ is an eigenpair of $A$ with $x \in \mathcal{X}$, then $(\lambda, X^Ix)$ is an eigenpair of $L$. (This applies to the Arnoldi method). 
+
+If $X \in C^{n \times k}$ is of full rank, then $(L,X)$ is an eigenpair of order k of $A$. Further, if $U$ is nonsingular then $(U^{-1}LU, XU)$ is an eigenpair of $A$. If $W$ is nonsingular then $(L, W^{-1}X)$ is an eigenpair of $W^{-1}AW$. This means the \evals of the representation of an eigenspace with respect to a basis are independent of the choice of basis - they are associated with the eigenspace. 
+
+\emph{Simple Eigenspaces}: An eigenspace is simple if the \evals are disjoint from the other \evals of $A$. If $X_1$ is a right eigenbasis and $Y_1$ is a left eigenbasis and they are normalized so that $Y_1^HX_1 = I$, then these bases are biorthogonal. 
+
+\subsection{Perturbation Theory}
+\emph{Canonical Angles:} Let $\mathcal{X}$ and $\mathcal{Y}$ be subspaces of $C$ of dimension $p$ with orthonormal bases $X$ and $Y$, respectively. The canonical angles between $\mathcal{X}$ and $\mathcal{Y}$ are $\theta_i = cos^{-1}\gamma_i$ where $\gamma_i$ are the singular values of $Y^HX$. More info on canonical angles follows in this part of the chapter.
+
+\emph{Residual Analysis:} Let $(X X_\perp)$ be unitary and $R = AX - XL$, $S^H = X^HA - LX^H$. Then $||R||$ and $||S||$ are minimized with $L = X^HAX$. This quantity is a generalization of the Rayleigh Quotient. If $X$ is an eigenbasis of $A$ then the R.q. is an eigenblock. Further, if $X$ is near an eigenbasis of $A$ then the R.q. should have good approximations to the \evals of $A$. 
+
+If the residual is small, then $(L,X)$ is an exact eigenpair of a slightly perturbed matrix, $A+E$. In order for this NOT to be a good approximation to the eigenpair, $(L,X)$ must be ill conditioned. There are bounds and associated definitions related to this idea. We can use perturbation theory to get some error bounds. 
+
+\subsection{Krylov Subspaces}
+Some properties of Krylov subspaces: 
+\begin{enumerate}
+  \item $\mathcal{K}_k(A,u) \subset \mathcal{K}_{k+1}(A,u)$ and $A\mathcal{K}_k(A,u) \subset \mathcal{K}_{k+1}(A,u)$.
+  \item If $\sigma \ne 0$, $\mathcal{K}_k(A,u) = \mathcal{K}_k(\sigma A,u) = \mathcal{K}_k(A,\sigma u)$.
+  \item For any $\kappa$, $\mathcal{K}_k(A,u) = \mathcal{K}_k(A - \kappa I,u)$.
+  \item If $W$ is nonsingluar, $\mathcal{K}_k(W^{-1}AW, W^{-1}u) = W^{-1}\mathcal{K}_k(A,u)$.
+\end{enumerate}
+Define $p(A) = \gamma_1 I + \gamma_2 A + \gamma_3 A^2 + \dots + \gamma_{k-1}A^{k-1}$, then if $v = p(A)u$ then $v \in \mathcal{K}_k(A, u)$ and $\mathcal{K}_k(A, u) = \{p(A)u: deg(p) \le k\}$. A Krylov sequence terminates at $l$ if $l$ is the smallest integer such that $\mathcal{K}_{l+1}(A,u) = \mathcal{K}_l(A,u)$. Then $\mathcal{K}_l$ is an eigenspace of $A$ of dimension $l$. 
+
+A bunch of bounds are established - none of which seem to be particularly useful for me. There is also some guidance on how to do Block Krylov sequences (which you may want to do to handle repeated eigenvalues).
+
+\subsection{Rayleigh-Ritz Approximation}
+Krylov subspaces contain increasingly accurate approximations to an eigenspace of $A$. The Rayleigh-Ritz method extracts an approximate eigenspace from a larger subspace (it approximates the best approximation). We will generally discuss a matrix $A$ and a subspace $\mathcal{U}$ that contains an approximate eigenspace of $A$ - it does not have to be a Krylov subspace, though it often is. 
+
+Let $U$ be a basis for the subspace $\mathcal{U}$ and $V$ is a left inverse of $U$ ($V^IU = I$). Set $B = V^HAU$. If $\mathcal{X} \subset \mathcal{U}$ is an eigenspace of $A$, then there is an eigenpair $(L,W)$ of $B$ such that $(L,UW)$ is an eigenpair of $A$ with $\mathcal{R}(UW) = \mathcal{X}$. This means we can find exact eigenspaces by looking at eigenpairs of the Rayleigh quotient $B$. To approximate an \epair corresponding to \cl{X} we do
+\begin{enumerate}
+  \item Let $U$ be a basis for \cl{U} and let $V^H$ be a left inverse of $U$.
+  \item Form the Rayleigh quotient $B=V^HAU$.
+  \item Let $(M,W)$ be a suitable \epair of $B$.
+  \item Return $(M,UW)$ as an approximate \epair of $A$.
+\end{enumerate}
+
+This is called the Rayleigh-Ritz procedure where $(M,UW)$ is a Ritz pair, $M$ is a Ritz block, and $UW$ is a Ritz basis. $\cl{R}(UW)$ is a Ritz space, $W$ is a primitive Ritz basis. If we want $(\lambda, Uw)$ then $\lambda$ is the Ritz value, $Uw$ is a Ritz vector, and $w$ is a primitive Ritz vector. There are two potential problems with this. First, we have to choose $(M,W)$. We do this by looking at the \evals of $B$. The second is that we have no guarantee that the results actually approximate the \epair of $A$. That is not so easy to fix. 
+
+What we have described is the oblique Rayleigh-Ritz method. This is often restricted to the orthogonal Rayleigh-Ritz method by taking $U$ to be orthonormal and $V = U$. Additionally, $W$ is orthonormal so $\hat{X} = UW$ is also orthonormal. The advantage: let $(M,\hat{X})$ be an orthogonal Rayleigh-Ritz pair with respect to $U$. Then $R=A\hat{X} - \hat{X}M$ is the minimum residual. Some convergence information is provided - the point being that we can get a Ritz pair to converge to an approximate \epair. 
+
+Notably, let $(\mu_\theta, x_\theta)$ be the Ritz approximation to $(\lambda, x)$. Then, $\mu_\theta = x_\theta^HAx_\theta$. If $A$ is Hermitian and $\lambda_1 \ge \lambda_2 \ge \dots \ge \lambda_n$ then we can order the Ritz values be ordered $\mu_1 \ge \mu_2 \ge \dots \ge \mu_m$. By the interlacing theorem this gives $\lambda_1 \ge \mu_1 \ge \lambda_2 \ge \mu_2 \ge \dots \lambda_{n-1} \ge \mu_{n-1} \ge \lambda_n$. 
+
+If $(\mu ,\tilde{X})$ is an approximation of $(\lambda, x)$, then a sufficient condition for $\tilde{X}$ to converge to $x$ is $\mu$ to converge to $\lambda$ and the residual to converge to zero. Sometimes the residual can fail to converge, so we can define Ritz vectors in two alternative ways. 
+
+We can define refined Ritz vectors as a solution to the problem 
+\begin{align}
+  &\text{minimize } ||A\hat{x}_\theta - \mu_\theta\hat{x}_\theta||_2 \\
+  &\text{subject to } \hat{x}_\theta \in \cl{U}_\theta\text{, } ||\hat{x}_\theta||_2 = 1 \:,
+\end{align}
+where $\mu_\theta$ is the Ritz value associated with $\cl{U}_\theta$. Refined Ritz vectors are guaranteed to converge as long as $\mu_\theta \to \lambda$. To find these refined Ritz vectors, we are really solving: minimize $||(A - \mu I)Uz||_2$, subject to $||z||_2 = 1$. This is accomplished using the following algorithm
+\begin{enumerate}
+  \item $V = AU$
+  \item $W = V - \mu U$
+  \item Compute the smallest singluar value of $W$ and its right singular vector $z$. 
+  \item $\hat{x} = Uz$
+\end{enumerate}
+The calculation of one refined and one regular Ritz vector will take the same amount of time. However, it will take longer to calculate multiple refined Ritz vectors compared to regular ones. This can be negated by using the cross-product algorithm to do the singular value decomposition. If $\cl{U}$ is a Krylov subspace, calculating refined Ritz vectors is actually much faster. 
+
+Another choice is to use harmonic Ritz vectors. These vectors can provide a set of approximating pairs while protecting pairs near a shift $\kappa$ against impersonators (where we get Rayleigh quotients from $u$s that are not near \evecs of $A$). $(\kappa + \delta, Uw)$ is a harmonic Ritz pair with shift $\kappa$ if $U^H(A - \kappa I)^H (A-\kappa I) Uw = \delta U^H(A - \kappa I)^H Uw$.  The convergence of this method has not yet been analyzed, but it does protect against imposters. If any harmonic Ritz value is within $\delta$ of $\kappa$, the pair must have a residual norm bounded by $|\delta|$. It is useful that $\lambda$ does not have to be very near $\kappa$ for this to be true. I don't think these will be useful for me, but info on finding these vectors is on pg. 294. 
+
+The Rayleigh-Ritz method is sometimes called the Galerkin or Galerkin-Petrov method. These methods solve $Ax = b$ where two subspaces, $\cl{U}$ and $\cl{V}$, and $x$ are chosen such that 
+\begin{enumerate}
+  \item $x \in \cl{U}$
+  \item $Ax - b \perp \cl{V}$.
+\end{enumerate}
+If $\cl{U} = \cl{V}$ then this is a Galerkin method, otherwise it is Galerkin-Petrov. If we say $\cl{V}$ is the subspaces spanned by $V$ from the algorithm at the beginning of this subsection, then any Ritz pair, $(\mu, x)$ satisifies
+\begin{enumerate}
+  \item $x \in \cl{U}$
+  \item $Ax - \lambda x \perp \cl{V}$.
+\end{enumerate}
+The Ritz-method is called a projection method because the Ritz pair is an \epair of $P_\cl{V}AP_\cl{U}$ where $P_\cl{V}$ and $P_\cl{U}$ are orthogonal projections onto $\cl{V}$ and $\cl{U}$, respectively. 
+
+%---------------------------------------------------------------------------------------
+\section{Krylov Sequence Methods}
+\subsection{Krylov Decompositions}
+The most common Krylov decompositions are the Arnoldi (for non-Hermitian) and Lanczos (for Hermitian), both of which come from orthogonalizing a Krylov sequence. These decompositions are not closed under certain natural operations and a few other more general decompositions will therefore also be discussed. I am going to skip Lanczos because the requirement of Hermitian matrices is too restrictive for my purposes. 
+
+\emph{Arnoldi:} For a standard Krylov subspace, the columns of \cl{K} become increasingly dependent as $k$ increases. Directly orthogonalizing will not help because some information will have already been lost. This is the motivation for the Arnoldi method. 
+
+Let $||u_1||_2 = 1$ and the columns of $\cl{K}_{k+1}(A,u_1)$ be linearly independent. Let $U_{k+1} = (u_1 \dots u_{k+1})$ be the Q-factor of $\cl{K}_{k+1}$. Then there is a $(k+1) \times k$ unreduced upper Hessenberg matrix $\hat{H}_k$ such that 
+\begin{equation}
+  AU_k = U_{k+1}\hat{H}_k \:.
+  \label{eq:Arnoldi}
+\end{equation}
+Conversely, if $U_{k+1}$ is orthonormal and satisfies \eqref{eq:Arnoldi}, where $\hat{H}_k$ is unreduced upper Hessenberg matrix, then $U_{k+1}$ is the Q-factor of $\cl{K}_{k+1}(A,u_1)$. This is known as a $k$th order Arnoldi decomposition (if $\hat{H}$ is reduced then the decomposition is also called reduced). We can partition $\hat{H}_k = \binom{H_k}{h_{k+1,k}\ve{e}^T}$ and let $\beta = h_{k+1,k}$ then we can rewrite the Arnoldi decomposition as
+\begin{equation}
+  AU_k = U_kH_k + \beta_ku_{k+1}\ve{e}_k^T \:.
+  \label{eq:Arnoldi2}
+\end{equation}
+
+A nonterminating Krylov subspace uniquely determines its starting vector. If the Krylov sequence $\cl{K}_k$ does not terminate at $k$, then it is unique up to the scaling of the columns of $U_k$. The $k$th column of \eqref{eq:Arnoldi2} can be written in the form $Au_k = U_kh_k + \beta_ku_{k+1}$. Then, from the orthonormality of $U_{k+1}$ we know $h_k = U_k^HAu_k$. But, since $\beta_ku_k = Au_k - U_kh_k$ and $||u_k||_2 = 1$
+\begin{align}
+  \beta_k &= ||Au_k - U_kh_k||_2 \text{ and} \\
+  u_{k+1} &= \beta_k^{-1}(Au_k - U_kh_k) \:.
+\end{align}
+This information leads to the Arnoldi algorithm (left out for brevity). Sometimes reorthogonalization is required, as described on pgs. 303-304. It requires between $nk^2$ and $2nk^2$ floating point add and multipies plus $k$ matrix-vector multiplies to compute a $k$th order Arnoldi decomposition. It also requires $nk$ floating point words to store the matrix $U$ and each step requires all the previous vectors. 
+
+We can replace $A$ with $(A - \kappa I)^{-1}$ which will make the \evals near $\kappa$ large. If we use this to form a Krylov sequence, the shift will produce good approximations to those large \evalsl. 
+
+\emph{Krylov Decompositions:} The Arnoldi method can be thought of as a vehicle for combining Krylov sequences with Rayleigh-Ritz refinement. Because it is an orthonormal basis for a Krylov subspace and its Rayleigh quotient it can be used to compute Ritz pairs. However, we will relax the definition of the decomposition to get one that is closed under similarity transformations of it Rayleigh quotient. 
+
+Let $u_{1}, u_{2}, ..., u_{k+1}$ be linearly independent and let $U_{k} = (u_{1}...u_{k})$. A Krylov decomposition of order $k$ is a relation of the form 
+\begin{equation}
+   AU_{k} = U_{k}B_{k} + u_{k+1}b_{k+1}^{H} \:. 
+   \label{eq:KryDecomp}
+\end{equation}
+If $U_{k+1}$ is orthonormal then the decomposition is orthonormal. It spans $\cl{R}(U_{k+1})$ and the basis is $U_{k+1}$. Two Krylov decompositions spanning the same subspace are equivalent. The difference from the Arnoldi decomposition is that $B$ is not assumed to be of any certain form. Every Krylov decomposition is equivalent  to a (possibly unreduced) Arnoldi decomposition (proof on pg. 311). If the decomposition is unreduced, then it is unique. 
+
+We have two classes of transformations to consider. The first is similarity transformations. If \eqref{eq:KryDecomp} is postmultiplied by a nonsingular $Q$ such that $A(U_{k}Q) = (U_{k}Q)(Q^{-1}B_{k}Q) + u_{k+1}(b_{k+1}^{H}Q)$, then the two decompositions are similar. We can reduce the Rayleigh quotient $B$ to any convenient form (such as Jordan Block giving Krylov-Jordan decompositions; the Arnoldi method is a Krylov-Hessenberg decomposition), which is useful. Note, the vector $u_{k+1}$ is unaltered. 
+
+The second class is translation. For this method let $\gamma \tilde{u}_{k+1} = u_{k+1} - U_{k}a$ where $\gamma \ne 0$. The form $AU_{k} = U_{k}(B_{k} + ab_{k+1}^{H}) + \tilde{u}_{k+1}\gamma (b_{k}^{H})$ is equivalent to \eqref{eq:KryDecomp}. Note that $\tilde{u}_{k}$ is constrained to have components along $u_{k}$ so the two decompositions span the same space. Algorithm 1.3 on pg. 313 shows how to reduce a Krylov decomposition to an Arnoldi decomposition. 
+
+Krylov decompositions can be used to find the different Ritz forms. To rind the refined Ritz vectors, simply find the SVD of the low-order matrix $\hat{B}_{\mu} = \binom{B-\mu I}{b^{H}}$. This works because $(A - \mu I)U = (U u)\hat{B}_{\mu}$. There is a way to get the Harmonic Ritz vectors using the QZ algorithm as well. 
+
+Note: Sorensen's IRAM is an orthonormal Krylov decomposition which is then truncated to yield an Arnoldi decomposition. 
+
+\subsection{Restarted Arnoldi}
+We know that Ritz pairs associated with an Arnoldi decomposition can be computed from the Rayleigh quotient using $H_{k}$. As $k$ increases we hope that the Ritz pair(s) of interest approach the eigenpair(s) of $A$. The only problem is that increasing $k$ causes storage problems. An alternative is to restart the Arnoldi process. There are two methods discussed. The first is IRAM, which I wrote about in MethodNotes.tex. The second is based on a Krylov-Schur decomposition. As far as I can tell I don't need to use the details about restarting the Arnoldi procees so I'm skipping most of this section.
+
+\emph{Stability and convergence:} Let $AU_{k} \approx U_{k+1}\hat{B}_{k}$ be an orthogonal Krylov decomposition computed by a restarted Arnoldi method. Then, there is a matrix $F$ satisfying 
+\begin{align}
+  ||F|| &\le \gamma ||A||_{2}\epsilon_{M} \text{ such that } \\
+  AU_{k} &= U_{k+1}\hat{B}_{k} + F \:,
+\end{align}
+where $\gamma$ is a generic constant and $\epsilon_{M}$ is machine precision (I think). This means the Ritz pairs will be accurately computed. 
+
+There is some similar analysis about the shifted situation, but it doesn't give a good sense of the actual bound - just that it could be worse (pg. 334). The convergence can be determined the following way. Consider $r = (A - \kappa I)^{-1} - \mu z$ where $(\mu, z)$ is the approximate \epair. Then the real approximate \eval is $\kappa + \mu^{-1}$ and we can say $Az - (\kappa + \mu^{-1})z = -\mu^{-1}(A - \kappa I)^{-1}r$. For the relative backward error to be less than some tolerance, $tol$ we will need
+\begin{equation}
+  \frac{||A - \kappa I||_{F}}{||A||_{F}} \frac{||r||_{2}}{|\mu|} \le tol
+\end{equation}
+Which, if $||A - \kappa I||_{F}$ and $||A||_{F}$ are on the same order gives gives a test of $||r||_{2} \le tol \cdot |\mu|$. 
+
+\subsection{Rational Krylov Transformations}
+We can restart the Arnoldi method with a new shift and a new vector. We will show that the Krylov subspace in $(A - \kappa_{1}I)^{-1}$ with starting vector $u$ is exactly the same as the Krylov subspace in $(A - \kappa_{2}I)^{-1}$ with a different starting vector $w$. Suppose we have the Krylov sequence
+\begin{equation}
+ u, (A - \kappa_{1}I)^{-1}u, (A - \kappa_{1}I)^{-2}u, \dots , (A - \kappa_{1}I)^{1-k}u \:. 
+\end{equation}
+If we set $v = (A - \kappa_{1}I)^{1-k}u$, and reverse the order of the terms we get
+\begin{equation}
+ v, (A - \kappa_{1}I)v, (A - \kappa_{1}I)^{2}v, \dots , (A - \kappa_{1}I)^{k-1}v \:, 
+\end{equation}
+so that $\cl{K}_{k}[(A - \kappa_{1}I)^{-1}, u] = \cl{K}_{k}(A - \kappa_{1}I, v)$. 
+
+We also know from the shift invariance theorem out of Chapter 4 that $\cl{K}_{k}(A - \kappa_{1}I, v) = \cl{K}_{k}(A - \kappa_{2}I, v)$. If we next set $w = (A - \kappa_{2}I)^{k-1}v$ then we have
+\begin{align}
+ \cl{K}_{k}(A - \kappa_{2}I, v) &= \cl{K}_{k}[(A - \kappa_{2}I)^{-1}, w] \text{ and it follows that } \\
+ \cl{K}_{k}[(A - \kappa_{1}I)^{-1}, u] &= \cl{K}_{k}[(A - \kappa_{2}I)^{-1}, w] \:.
+\end{align}
+
+All this leads to a rational Krylov method that involves lots of transformations. As far as I can tell I won't need that, but the above information can be really useful for explicitly stating why we can shift and change the shift and do inverse and everything still comes out to the same answer. 
+
+*Skipped the Lanczos section*
+
+\subsection{Generalized Eigenvalue Problem}
+The goal here is to transform the generalized \eval problem $Ax = \lambda Bx$ to an ordinary \eval problem and then apply the Arnoldi method. The trick is how to do the transformation and how to determine convergence. 
+
+We would like to convert $Ax = \lambda Bx$ to $Cx = \mu x$. We can do this using a shift by doing the following
+\begin{itemize}
+  \item $(A - \kappa B)x = (\lambda - \kappa)Bx$
+  \item $(A- \kappa B)^{-1}Bx = (\lambda - \kappa)^{-1}x$
+  \item Now let $C = (A - \kappa B)^{-1}$ and $\mu = (\lambda - \kappa)^{-1}$
+  \item Thus we have the form $Cx = \mu x$.
+\end{itemize}
+This can be solved in two steps as long as $A - \kappa B$ can be factored: 
+\begin{enumerate}
+  \item $w = Bu$, 
+  \item Solve the system $(A - \kappa B)v = w$.
+\end{enumerate}
+ Pg. 369-370 give convergence criteria and bounds on the residual. If $B$ is positive definite then a specific inner product can be defined and the Arnoldi algorithm can be introduced wrt this $B$ inner product. There are also some notes when $B$ is semi-definite. 
+
+\section{Alternatives}
+
+ 
+
+\end{document}

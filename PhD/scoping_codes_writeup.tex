@@ -1,0 +1,291 @@
+\documentclass[12pt, letterpaper]{article}
+\usepackage[letterpaper, textwidth=6.5in, textheight=9in]{geometry}
+\usepackage{times}
+\usepackage{amsmath}
+
+\renewcommand{\baselinestretch}{1.3}
+\newcommand{\ve}[1]{\ensuremath{\mathbf{#1}}}
+
+% The float package HAS to load before hyperref
+\usepackage{float} % for psuedocode formatting
+\usepackage[pdftex]{hyperref}
+
+% define a style for pseudocode. This must load AFTER hyperref.
+\floatstyle{ruled}
+\newfloat{algorithm}{h}{lop}
+\floatname{algorithm}{Algorithm}
+
+\date{\today}
+\title{Scoping Code Methods: RQI and Multigrid in Energy}
+\author{Rachel Slaybaugh}
+\begin{document}
+\maketitle
+
+The scoping codes solve the infinite medium, multigroup, transport equation. This is formulated as follows:
+\begin{align}
+\ve{T}\psi &= \ve{S}\psi + q \:, \text{ or} \\
+\ve{T}\psi &= \ve{S}\psi + \frac{1}{k}\chi f \psi \:.
+\end{align}
+Here $\ve{T}$ is the matrix of total cross sections, $\ve{S}$ has the scattering cross sections, $q$ holds the external source, $\psi$ is the flux, $k$ is the eigenvalue that indicates criticality, $\chi$ has the fission distribution information, and $f$ holds $\nu \Sigma_{f}$. 
+
+We can move the scattering to the left and define $\ve{F}$ as $\chi f$. We can group the left matrices together, giving:
+
+\begin{align}
+  \underbrace{ \bigl( \ve{T} - \ve{S} \bigr) }_{\ve{A}} \psi &=  q \:, \text{ or} \\
+ \underbrace{ \bigl( \ve{T-S} \bigr) }_{\ve{A}} \psi &= \frac{1}{k} \ve{F} \psi \:.
+\label{eqn:rearranged}
+\end{align}
+
+The RQI solver was implemented to solve the eigenvalue form and a multigrid method was used to precondition the GMRES solution of the fixed source form. Both codes are written in Python.
+
+\section{RQI}
+Power Iteration is a traditional solution method for transport eigenvalue problems. When the dominance ratio is high, this can be quite slow to converge. Shifted inverse iteration can converge much more quickly when the shift is close to the eigenvalue of interest. The Rayleigh quotient, $\rho = \frac{x^{T}\ve{A}x}{x^{T}\ve{F}x}$, is a close approximation to $\frac{1}{k}$ that corresponds to the eigenvector $\psi$. Using the Rayleigh quotient as the shift in shifted inverse iteration provides very good convergence properties. 
+
+The shift was included by subtracting the Rayleigh quotient multiplied by the fission matrix from each side:
+\begin{equation}
+ \bigl( \ve{T} - (\ve{S} + \rho \ve{F})\bigr) \psi = \bigl(\frac{1}{k} - \rho\bigr)\chi f \psi
+ \label{eq:shiftedRQI}
+\end{equation}
+%
+RQI was implemented as an infinite medium solver for the shifted equation using Algorithm \ref{algo:RQI}. 
+%
+\begin{algorithm}
+\caption{The RQI for Infinite Medium Neutron Transport}
+  $\ve{A} = \ve{T} - \ve{S}$; $\ve{F} = \chi \cdot f$.\\
+  Set $\psi_{old} = \psi_{0}$ and $k = k_{0}$\\
+  $\rho_{old} = \frac{1}{k}$ \\
+  Normalize $\psi_{old}$ so that it is a unit vector \\
+  Calculate the initial Rayleigh quotient: 
+  \begin{equation}
+    \rho = \frac{\psi_{old}^{T}\ve{A}\psi_{old}}{\psi_{old}^{T} \ve{F} \psi_{old}} \nonumber
+  \end{equation}
+  Calculate the initial fission source: $q^{f}_{old} = f \cdot \psi_{old}$ \\
+  For $i = 0$ until converged:
+  \begin{list}{}{\hspace{2em}}
+     \item Calculate the shift: $\mu = \rho_{old} - \rho$
+     \item If $\mu = 0$, set it to $1 \times 10^{-6}$
+     \item Apply the shift to both sides by [1] subtracting $\rho \ve{F}$ from $\ve{A}$ and [2] making the right hand side $\mu \ve{F} \psi$.
+     \item Solve Equation \eqref{eq:shiftedRQI} for $\psi_{new}$ and normalize $\psi_{new}$
+     \item Get the new fission source: $q^{f}_{new} = f \cdot \psi_{new}$
+     \item Update $k = \frac{1}{\rho} \frac{q^{f}_{new}}{q^{f}_{old}}$
+     \item Set $\rho_{old} = 1/k$
+     \item Get a new Rayleigh quotient: 
+     \begin{equation}
+       \rho = \frac{\psi_{new}^{T}\ve{A}\psi_{new}}{\psi_{new}^{T} \ve{F} \psi_{new}} \nonumber
+     \end{equation}
+  \end{list}
+  \label{algo:RQI}
+\end{algorithm}
+
+This was implemented and tested on a few very simple problems. The result was compared to Power Iteration and the algorithm was found to converge to the correct $k$, $\rho$, and $\psi$. 
+
+Note: instead of calculating the Rayleigh quotient, an unchanging shift can be applied. If the shift is zero, the algorithm essentially becomes Power Iteration. If the desired $k$ is known approximately at the outset, $\rho = k_{guess}$ can be set. Both of these methods require some adjustments, giving the following Algorithm \ref{algo:shifted}:
+%
+\begin{algorithm}
+\caption{The Shifted Inverse Iteration for Infinite Medium Neutron Transport}
+  $\ve{A} = \ve{T} - \ve{S}$; $\ve{F} = \chi \cdot f$.\\
+  Set $\psi_{old} = \psi_{0}$ and $k_{old} = k_{0}$ \\
+  Normalize $\psi_{old}$ so that it is a unit vector \\
+  $\rho = \frac{1}{k_{guess}}$ \\
+  $\ve{\tilde{A}} = \ve{A} - \rho \ve{F}$ \\
+  Calculate the initial fission source: $q^{f}_{old} = f \cdot \psi_{old}$ \\
+  For $i = 0$ until converged:
+  \begin{list}{}{\hspace{2em}}
+     \item Calculate the shift: $\mu = \frac{1}{k_{old}} - \rho$
+     \item If $\mu = 0$, set it to $1 \times 10^{-6}$
+     \item Apply the shift to the right hand side: $\mu \ve{F} \psi$.
+     \item Solve Equation \eqref{eq:shiftedRQI} for $\psi_{new}$ and normalize $\psi_{new}$
+     \item Get the new fission source: $q^{f}_{new} = f \cdot \psi_{new}$
+     \item Update $k$ *** Important ***: when $\rho=0$ we can use $k_{new} = k_{old} \frac{q^{f}_{new}}{q^{f}_{old}}$,  but when $\rho \ne 0$ that doesn't work. The only thing I could find that works is the Rayleigh Quotient for $k$. 
+     \item Set $new$ values to $old$
+  \end{list}
+  \label{algo:shifted}
+\end{algorithm}
+
+\subsection{Reflecting Boundary Conditions} Reference: Personal Tom communication, Warsa nse 147 pt 218.
+
+The above algorithm works for vacuum boundary conditions. However, with reflecting boundary conditions some modifications must be made to the calculation of the Rayleigh quotient. Denovo stores the boundary condition information between the flux moments in the solution vector. For the following discussion let $\phi_{g}$ be of length $f_{g} = t \times c \times u$ and indicate moments for group $g$; let $\psi_{r,g}$ be of length $m = n \times c_{r} \times u$ and indicate the reflected angular flux for that group ($c_{r}$ is the number of cells on the reflecting boundaries). For each group the solution vector and associated source are of length $f_{g} + m$ and look like
+%
+\begin{alignat}{2}
+ \Phi_{g} = \begin{pmatrix} \phi_{g} & \psi_{r,g} \end{pmatrix}^{T} \:, \qquad Q = \begin{pmatrix} q & 0 \end{pmatrix}^{T} \:.
+\label{eq:reflFlux}
+\end{alignat}
+
+One issue with reflecting boundary conditions is that the dot products taken to compute the final ratio must exclude the boundary terms. This can be done by truncating $\Phi_{g}$ to only include $\phi_{g}$ in the dot product calculations. 
+
+Understanding the next issue is aided by considering what the operator form of the transport equation for a group looks like with reflecting boundary conditions. First recall the transport equation for group $g$ that \emph{does not} include boundaries, where group indices are excluded for notational brevity:
+%
+\begin{align}
+  \mathbf{L} \psi &= \mathbf{MS}\phi + q
+  \label{eq:transport} \\
+  \bigl(\ve{I} - \ve{DL}^{-1}\ve{MS} \bigr) \phi &= \ve{DL}^{-1}q \:.
+  \label{eq:transportMoments}
+\end{align}
+
+To include reflecting boundaries, the we must expand the operators in the appropriate dimensions from $f_{g}$ to $f_{g} + m$ to act on $\Phi$. The reflecting operators will be denoted by a tilde. The transport operator is split into volume (traditional) and reflected components: $\tilde{\ve{L}} = \ve{L}_{v} + \ve{L}_{r}$. The other terms become:
+%
+\begin{alignat}{4}
+  \ve{\tilde{I}} = \begin{pmatrix} \ve{I} & 0 \\ 0 & \ve{I}_{r} \end{pmatrix} \:, \nonumber
+ \qquad
+ \ve{\tilde{D}} = \begin{pmatrix} \ve{D} & 0 \\ 0 & \ve{I}_{r} \end{pmatrix} \:, \nonumber
+ \qquad
+ \ve{\tilde{M}} = \begin{pmatrix} \ve{M} & 0 \\ 0 & \ve{I}_{r} \end{pmatrix} \:, \nonumber
+ \qquad
+ \ve{\tilde{S}} = \begin{pmatrix} \ve{S} & 0 \\ 0 & \ve{I}_{r} \end{pmatrix} \:. \nonumber
+\end{alignat}
+%
+The operators in Equation \eqref{eq:transportMoments} can be replaced by the reflecting operators, and then doing a transport solve will converge both the moments and the reflected terms at once. When computing the Rayleigh quotient, however, the operator is applied but a full solve is not done. With the standard implementation this does not converge $\psi_{r}$ and those terms therefore do not contribute to the solution properly. 
+
+To address this the reflecting boundaries must be converged first by solving each group separately while excluding within-group scattering. Explicitly multiplying the reflecting matrices illustrates what is happening here. The inverse of the reflecting transport operator is
+%
+\begin{alignat}{3}
+ \ve{\tilde{L}}^{-1} = \begin{pmatrix} \ve{I} \\ \ve{P}^{T} \end{pmatrix}
+ \begin{pmatrix} \ve{L}_{v}^{-1} & -\ve{L}_{v}^{-1} \ve{L}_{r} \ve{P} \end{pmatrix}
+ =
+ \begin{pmatrix} \ve{L}_{v}^{-1} & -\ve{L}_{v}^{-1} \ve{L}_{r} \ve{P} \\
+                   \ve{P}^{T}\ve{L}_{v}^{-1} & -\ \ve{P}^{T}\ve{L}_{v}^{-1} \ve{L}_{r} \ve{P} \end{pmatrix}  \:,
+\label{eq:reflInverse}
+\end{alignat} 
+%
+where $\ve{P}$ is a projection operator that projects $\psi_{r} \to \psi$. The multiplication makes the system:
+%
+\begin{equation}
+  \Bigg[ \begin{pmatrix} \ve{I} & 0 \\ 0 & \ve{I}_{r} \end{pmatrix} - 
+  \begin{pmatrix} \ve{DL}_{v}^{-1}\ve{MS} & -\ve{DL}_{v}^{-1}\ve{L}_{r}\ve{P} \\
+                      \ve{P}^{T}\ve{L}_{v}^{-1}\ve{MS} & - \ve{P}^{T}\ve{L}_{v}^{-1} \ve{L}_{r} \ve{P} \end{pmatrix} \Bigg]
+  \begin{pmatrix} \phi \\ \psi_{r} \end{pmatrix}
+  =
+  \begin{pmatrix} \ve{DL}_{v}^{-1} & -\ve{DL}_{v}^{-1}\ve{L}_{r}\ve{P} \\
+                     \ve{P}^{T}\ve{L}_{v}^{-1} & - \ve{P}^{T}\ve{L}_{v}^{-1} \ve{L}_{r} \ve{P} \end{pmatrix}
+  \begin{pmatrix} q \\ 0 \end{pmatrix} \:.
+\label{eq:explicitBlocks}
+\end{equation}
+% 
+
+Now there are two equations with two unknowns which can be examined for similarities.
+\begin{align}
+  \phi - \ve{DL}_{v}^{-1}\ve{MS}\phi + \ve{DL}_{v}^{-1}\ve{L}_{r}\ve{P} \psi_{r} &= \ve{DL}_{v}^{-1} q 
+\label{eq:momentTE} \\
+  \psi_{r} - \ve{P}^{T}\ve{L}_{v}^{-1}\ve{MS} \phi + \ve{P}^{T}\ve{L}_{v}^{-1} \ve{L}_{r} \ve{P} \psi_{r} &= 0 
+\label{eq:reflTE}
+\end{align}
+Comparing the reflecting case to the standard case, $\ve{P}^{T}$ replaces $\ve{D}$ and $-\ve{L}_{r}\ve{P}$ acts like $\ve{MS}$. Equation \eqref{eq:reflTE} can be rearranged and solved for $\psi_{r}$. In Denovo this amounts to solving each group separately to converge the reflecting flux where the group source is $\ve{P}^{T}\ve{L}_{v}^{-1}\ve{MS} \phi$. The reflecting boundaries will then contribute properly when solving Equation \eqref{eq:momentTE} where the effective source becomes $q - \ve{DL}_{v}^{-1}\ve{L}_{r}\ve{P} \psi_{r}$.  
+
+In practice, to apply $\ve{A}$ is Denovo to calculate the Rayleigh quotient the process is:
+%
+\begin{alignat}{2}
+  \ve{\tilde{L}} z = v \:, \qquad y = \ve{\tilde{D}}z \:.
+\label{eq:calcRQ}
+\end{alignat}
+%
+Now Equation \eqref{eq:calcRQ} looks just like Equation \eqref{eq:transport} where the within-group scattering source is set to zero ($\ve{S} = 0$) and $v = q$. 
+
+An alternative way to express the same idea using the traditional operators using the $\ve{L}_{v}$ and $\ve{L}_{r}$ terms can be informative as well. This is presented in source iteration notation, where the reflecting boundaries are lagged. This is exactly the same idea as above, though iteration indices were excluded.
+\begin{align}
+  \psi^{l+1} &= \ve{L}_{v}^{-1} \bigl( \ve{MS} \phi^{l} - \ve{L}_{r} \ve{P} \psi_{r}^{l} \bigr) + \ve{D}q 
+\label{eq:laggedSI} \\
+  \phi^{l+1} &= \ve{D}\psi^{l+1} \:.
+\end{align}
+
+%----------------------------------------------------------------------------------------------------
+\section{Multigrid Preconditioner}
+The overall solver of the fixed source problem is GMRES. The GMRES algorithm for the problem $\ve{A} \psi = q$ ($\ve{A} = \ve{T} - \ve{S}$ for the problem at hand) can be seen in Algorithm \ref{algo:GMRES}. The matrix $\ve{V} = [v_{0} v_{1} ... v_{k}]$ forms an orthogonal basis for the Krylov subspace $\mathcal{K}_{k} = span\{b, \ve{A}b, \ve{A}^{2}b, ..., \ve{A}^{k-1}b\}$. The matrix $\ve{H}$ is upper Hessenberg, and its eigenvalues approximate those of $\ve{A}$.
+%
+\begin{algorithm}
+  \caption{ Generalized Minimum RESidual}
+  $b = q$ \\
+  $v_0 = \frac{b}{||b||}$ \\
+  $\beta = ||b|| e_1$ \\
+  For $j = 0$ to $k$: 
+  \begin{list}{}{\hspace{2em}}
+    \item $\text{} q = \ve{A}v_{j}$
+    \item For $i = 0$ to $j$:
+    \begin{list}{}{\hspace{2em}}
+       \item $\text{ } h_{i,j} = v_{i} \cdot q$
+       \item $\text{ } q = q - h_{i,j} \times v_{i}$
+    \end{list} 
+    \item $\text{ } h_{j+1,j} = ||q||$ 
+    \item $\text{ } v_{j+1} = \frac{q} {h_{j+1,j}}$ 
+  \end{list}
+  End For \\
+  Using least squares, solve $y_k \leftarrow ||\beta - \ve{H}_{k} y_{k}||_{2}$. \\
+  Form the solution $\psi_k = \ve{V}_k \cdot y_k$
+  \label{algo:GMRES}
+\end{algorithm}
+%
+The convergence criteria here is to test for when $h_{j+1,j}$ becomes less than the convergence tolerance. 
+
+The GMRES algorithm can be right preconditioned with a matrix $\ve{M} \approx \ve{A}$ by converting the original problem to the following problem:
+%
+\begin{align}
+  \ve{AM^{-1}M}\psi &= b \:, \\
+  \text{To solve, set} \qquad y &= \ve{M}\psi \\
+  \text{and with GMRES solve} \qquad \ve{AM^{-1}}y &= b \:. \\
+  \text{After finding }y\text{, the final step is} \qquad \psi &= \ve{M^{-1}}y \:.
+\end{align}
+%
+Incorporating this into the GMRES algorithm is not too difficult. In this case the following two steps are altered or amended:
+\begin{enumerate}
+  \item $q = \ve{A}v_{j}$ is replaced by $x = \ve{M}^{-1}v_{j}$, $q = \ve{A}x$.
+  \item After the solution for $\psi_{k}$ is found, $\psi_{k} \leftarrow \ve{M}^{-1}\psi_{k}$ to get the final answer.
+\end{enumerate}
+
+For the work presented here, the preconditioner is Multigrid in energy. The inversion of $\ve{M}$ is carried out by applying the preconditioner. To see how this works, let us define the action of the multigrid V-cycle as $\ve{M}$, giving some problem of the form $\ve{M}x = b$. Applying this operator gives the result $x = \ve{M}^{-1}b$. The inversions required in the right preconditioning algorithm are carried out by applying mutligrid. The algorithm for a two-grid multigrid method can be seen in Algorithm \ref{algo:MG}. The $h$s indicate the grid resolution. 
+%
+\begin{algorithm}
+  \caption{ Multigrid v-cycle: $v^h \rightarrow MG(v^h, q^h)$}
+  \label{algo:MG}
+  Relax $\mu$ times on $\ve{A}^h \psi^h = q^h$ on the fine grid $\Omega^h$ using initial guess $v^h$. \\
+  Compute the residual, $r^h = q^h - \ve{A} v^h$. \\
+  Using some restriction operator, $\ve{R}_h^{2h}$, restrict the residual to a coarser grid: $r^{2h} =  \ve{R}_h^{2h} r^h$. \\
+  Solve the residual equation, $\ve{A}^{2h} e^{2h} = r^{2h}$, on coarse grid $\Omega^{2h}$. \\
+  Using some prolongation operator, $\ve{P}_{2h}^h$, prolong (interpolate) the coarse grid error back to a finer grid: $e^h = \ve{P}_{2h}^h e^{2h}$. \\
+  Add the error to the fine grid guess: $v^h \rightarrow v^h + e^h$. \\
+  Relax $\mu$ times on $\ve{A}^h \psi^h = q^h$ on $\Omega^h$ to get an improved solution. 
+\end{algorithm}
+%
+Typically, more than two levels are used, this is called a V-cycle. In this case, the solutions are continually restricted to coarser and coarser grids until the coarsest level is reached. The problem is solved directly on the coarsest grid. The new solution is then prolonged to the next finest grid and applied as a correction. This is repeated up the levels until the finest level is reached and the final correction is made. 
+
+For the infinite medium case, \ve{T} and \ve{S} had to be restricted to exist on each level. The restriction was done using simple averaging. In one dimension this is $v^{2h}_{j} = 0.5 \times (v^{h}_{2j} + v^{h}_{2j-1})$. The prolongation method was an interpolation scheme that set the fine points that match the coarse points to be equal: $v^{h}_{2j} = v^{2h}_{j}$, and the remaining fine points to be the average of the coarse points on either side of it: $v^{h}_{2j+1} = 0.5 \times (v^{2h}_{j} + v^{2h}_{j+1})$. This simple scheme was chosen because it is simple, and because it is common to combine energy groups linearly. 
+
+Both Gauss Seidel (with SOR as a variation) and Jacobi (with weighted Jacobi as a variation) were used for relaxation methods. For the preconditioning tests the weighing parameter, $\omega$, was set to $1.0$. When used as a standalone multigrid solver, changing $\omega$ was beneficial. When used as a preconditioner, changing $\omega$ was not beneficial. More investigation about choosing $\omega$ is required. 
+
+The multigrid method was applied as the preconditioner, that is, the $\ve{M^{-1}}$. Note that in this case the grids are energy grids. There is no spatial or angular discretization. The variables are (1) the number of V-cycles to use at each preconditioning step and (2) the number of relaxation steps to take at each level: $\mu$. All levels use the same $\mu$. 
+
+The preconditioned GMRES was applied to a 27 group problem. Groups 15 through 27 contained upscattering. The source had unit value in the three highest energy groups. For a tolerance of $1 \times 10^{-5}$, unpreconditioned GMRES took 27 iterations (the maximum possible). Table \ref{table:GS} shows the results when Gauss Seidel was used as the smoother and Table \ref{table:Jacobi} shows the results using Jacobi. While Gauss Seidel out-performed Jacobi, both reduced the total number of iterations substantially. 
+%
+\begin{table}[!h]
+\caption{Number of Iterations GMRES Preconditioned with Gauss Seidel Multigrid}
+\begin{center}
+\begin{tabular}{c | c c c c c}
+V-cycles / $\mu$  & 1 & 2 & 3 & 4 & 5 \\
+\hline
+1 & 11 & 4 & 3 & 2 & 2 \\
+2 & 7 & 2 \\
+3 & 3 & 2\\
+4 & 2\\
+\hline
+\end{tabular}
+\end{center}
+\label{table:GS}
+\end{table}
+%
+\begin{table}[!h]
+\caption{Number of Iterations GMRES Preconditioned with Jacobi Multigrid}
+\begin{center}
+\begin{tabular}{c | c c c c c}
+V-cycles / $\mu$  & 1 & 2 & 3 & 4 & 5 \\
+\hline
+1 & 24 & 18 & 13 & 8 & 10 \\
+2 & 19 & 12 & 6 & 5 & 4 \\
+3 & 19 & 6 & 4 & 4 & 3\\
+4 & 12 & 4 & 4 & 3 & 3\\
+\hline
+\end{tabular}
+\end{center}
+\label{table:Jacobi}
+\end{table}
+
+To determine the best combination of V-cycles and relaxation steps per level, the final implementation in Denovo will need to be considered. This will be determined by parallelization and predicted operation count. 
+
+\end{document}
