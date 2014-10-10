@@ -1,0 +1,36 @@
+\documentclass[12pt,twoside]{article}
+\usepackage{amsmath}
+\date{\today}
+\title{Notes on Transport Methods in General}
+\author{Rachel Slaybaugh}
+\begin{document}
+\maketitle
+
+\section{Quasi-Diffusion}
+
+Miften and Larsen summary \cite{Miften1993}
+
+Miften and Larsen re-derive the quasi-diffusion (QD) equations that has an "Eddington factor" that is invariante under a change in amplitude of $\psi$ and independent of $\psi$ when it is a linear function of $\mu$. The derivation they go through doesn't appear to hold is scattering is anything other than isotropic.
+
+The ultimate contributions are
+\begin{enumerate}
+\item a derivaiton in spherical coordinates that guarantees positivity of the analytic solution
+\item new diffusion boundary conditions in planar and spherical that are more accurate and efficient
+\item discretization of the new analystic forms of the QD using short characteristics, which helps ensure positivity.
+\end{enumerate} 
+
+An interesting thing they do is apply a shift in the power iteration method for the eigenvalue. They subtract a perturbation of the smaller of the absoprtion cross section OR the fission term from each side. 
+
+They also do a modified QD where they have an adjustable tuning parameter that's based on quadrature, $c$ and $\sigma_T h$ - turns out the Russians did this earlier (Anistratov comment). 
+
+In general this is all just an acceleration method, so some of the math steps are pretty kludgey. 
+
+
+\vspace*{2em}
+The original work is by Gol'din \cite{Goldin1964}; it's old and I think the Miften and Larsen paper is much clearer. 
+
+%------------- Bibliography --------------------
+\bibliographystyle{model1-num-names}
+\bibliography{te_general}
+
+\end{document}
