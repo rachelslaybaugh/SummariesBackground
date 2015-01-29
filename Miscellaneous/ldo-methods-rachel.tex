@@ -1,4 +1,5 @@
 \documentclass[12pt,twoside]{article}
+\usepackage[letterpaper, textwidth=6.5in, textheight=9in]{geometry}
 \usepackage{amsmath}
 \usepackage{hyperref}
 
@@ -13,6 +14,7 @@
 \newcommand{\Yo}[2]{\ensuremath{Y^o_{#1}(\vOmega_#2)}}
 
 \newcommand{\Jij}[2]{\ensuremath{\int L(\vOmega_#1)L(\vOmega_#2)}}
+\newcommand{\Sij}[2]{\ensuremath{\sigma^{gg'}_{\text{s}}(\vOmega_#1 \cdot \vOmega_#2)}}
 
 \newcommand{\sigg}[1]{\ensuremath{\sigma^{gg'}_{\text{s}\,#1}}}
 \newcommand{\psig}{\ensuremath{\psi^g}}
@@ -47,6 +49,26 @@
 
 \section*{Operator Comparisons}
 This is largely so I can get my brain wrapped around what is actually going where, mostly for sizing purposes and so I can figure out what we can reuse, etc.
+
+%-----------------------------------------------------------
+\subsection*{Sizing}
+The sizes used in Denovo are
+\begin{equation}
+  \begin{aligned}
+    N_g &= \text{number of groups}\:,\\
+    t   &= \text{number of moments}\:,\\
+    n   &= \text{number of angles}\:,\\
+    N   &= \text{$P_N$ order}\:,\\
+    N_c &= \text{number of cells}\:,\\
+    N_e &= \text{number of unknowns per cell}\:.
+  \end{aligned}
+\end{equation}
+Now, we define
+\begin{align}
+  a &= N_g\times n\times N_c\times N_e\:,\\
+  f &= N_g\times t\times N_c\times N_e\:.
+\end{align}
+In the new formulation I believe that $N$ becomes the Lagrange order, which is now the number of angles (i.e.\ quadrature points)?
 
 %-----------------------------------------------------------
 \subsection*{Original}
@@ -182,6 +204,19 @@ Finally, the flux and source moment vectors are defined
   \end{pmatrix}^T\:.
 \end{align}
 
+\vspace*{1 em}
+The operator sizes of the \textbf{original} formulation are
+\begin{align*}
+\ve{I} &= (f \times f) \\
+\ve{D} &= (f \times a) \\
+\ve{L} = \ve{L^{-1}} &= (a \times a) \\
+\ve{M} &= (a \times f) \\
+\ve{S} &= (f \times f) \\
+\vec{\phi} &= (f \times 1) \\
+\vec{\psi} &= (a \times 1) \\
+\vec{Q} &= (a \times 1)
+\end{align*}
+
 
 %-----------------------------------------------------------
 \subsection*{LDO}
@@ -194,7 +229,7 @@ We are solving the \textit{LDO} equations, written in operator form in this way:
 \bigl(\ve{I} + \ve{D L^{-1} J \Sigma_s}\bigr)\vec{\psi} &= \ve{D L^{-1}}\vec{Q}
 \end{align}
 % 
-In these equations $\ve{J}$ contains the Lagrange expansion and $\ve{\Sigma_s}$ contains the scattering cross sections ($\Sigma_s(\hat{\Omega}_i \cdot \hat{\Omega}_j)$).
+In these equations $\ve{J}$ contains the Lagrange expansion and $\ve{\Sigma_s}$ contains the scattering cross sections ($\sigma_s(\hat{\Omega}_i \cdot \hat{\Omega}_j)$).
 %
 Now, 
 \begin{multline}
@@ -224,7 +259,7 @@ Now,
       \vdots & \vdots & \vdots & \ddots & \vdots \\
       [\ve{\Sigma_s}]_{G0} & [\ve{\Sigma_s}]_{G1} & [\ve{\Sigma_s}]_{G2} & \cdots &
       [\ve{\Sigma_s}]_{GG}
-    \end{pmatrix}\\
+    \end{pmatrix}
     \times
     \begin{pmatrix}
       [\psi]_0 \\
@@ -232,7 +267,7 @@ Now,
       [\psi]_2 \\
       \vdots   \\
       [\psi]_G
-    \end{pmatrix}
+    \end{pmatrix}\\
     %%
     +
     \begin{pmatrix}
@@ -252,100 +287,51 @@ Now,
     \label{eq:matrix-transport}
 \end{multline}
 where the notation $[\cdot]_g$ indicates a block matrix over all
-unknowns for a single group.  Accordingly, we define
-\begin{equation}
-  [\psi]_g = \begin{pmatrix}
+unknowns for a single group.  Accordingly, we define the angular flux and source, respectively, as
+\begin{align}
+  [\psi]_g &= \begin{pmatrix}
     \psi^g_1 & \psi^g_2 & \psi^g_3 & \cdots \psi^g_n
+  \end{pmatrix}^T\:, \\
+    [q]_g &= \begin{pmatrix}
+    q^g_1 & q^g_2 & q^g_3 & \cdots q^g_n
   \end{pmatrix}^T\:.
-\end{equation}
+\end{align}
 %
-The operator $\ve{M}$ is the moment-to-discrete matrix. It is used
+The operator $\ve{J}$ performs the Lagrange interpolation. It is used
 to convert harmonic moments into discrete angles, and it is defined
 \begin{equation}
   {\footnotesize
-  [\ve{M}]_{gg} = \begin{pmatrix}
-    \Ye{00}{1} & \Ye{10}{1} & \Yo{11}{1} & \Ye{11}{1} &
-    \Ye{20}{1} & \cdots & \Yo{NN}{1} & \Ye{NN}{1} \\
-    \Ye{00}{2} & \Ye{10}{2} & \Yo{11}{2} & \Ye{11}{2} &
-    \Ye{20}{2} & \cdots & \Yo{NN}{2} & \Ye{NN}{2} \\
-    \Ye{00}{3} & \Ye{10}{3} & \Yo{11}{3} & \Ye{11}{3} &
-    \Ye{20}{3} & \cdots & \Yo{NN}{3} & \Ye{NN}{3} \\
-    \vdots     & \vdots     & \vdots     & \vdots     &
-    \vdots     &        & \vdots     & \vdots     \\
-    \Ye{00}{n} & \Ye{10}{n} & \Yo{11}{n} & \Ye{11}{n} &
-    \Ye{20}{n} & \cdots & \Yo{NN}{n} & \Ye{NN}{n}
+  [\ve{J}] = \begin{pmatrix}
+    \Jij{1}{1} & \Jij{2}{1} & \Jij{3}{1} & \cdots & \Jij{n}{1} \\
+    \Jij{1}{2} & \Jij{2}{2} & \Jij{3}{2} & \cdots & \Jij{n}{2} \\
+    \Jij{1}{3} & \Jij{2}{3} & \Jij{3}{3} & \cdots & \Jij{n}{3} \\
+    \vdots     & \vdots     & \vdots     &        & \vdots     \\    
+    \Jij{1}{n} & \Jij{2}{n} & \Jij{3}{n} & \cdots & \Jij{n}{n} \\
   \end{pmatrix}}\:.
 \end{equation}
 %
-The operator $\ve{D}$ is the discrete-to-moment matrix. It is used
-to convert integrate discrete angles into harmonic moments, and it is defined
+The operator $\ve{D}$ is now just an identity matrix. s, and it is defined
 \begin{equation}
   {\footnotesize
   \ve{D} = \begin{pmatrix}
-    w_1\Ye{00}{1} & w_2\Ye{00}{1} & w_3\Ye{00}{1} & \cdots & w_2\Ye{00}{1} \\ 
-    w_1\Ye{10}{1} & w_2\Ye{10}{1} & w_3\Ye{10}{1} & \cdots & w_n\Ye{10}{1} \\
-    w_1\Yo{11}{1} & w_2\Yo{11}{1} & w_3\Yo{11}{1} & \cdots & w_n\Yo{11}{1} \\
-    w_1\Ye{11}{1} & w_2\Ye{11}{1} & w_3\Ye{11}{1} & \cdots & w_n\Ye{11}{1} \\
-    w_1\Ye{20}{1} & w_2\Ye{20}{1} & w_3\Ye{20}{1} & \cdots & w_n\Ye{20}{1} \\
-    \vdots        & \vdots        & \vdots        &        & \vdots        \\
-    w_1\Yo{NN}{1} & w_2\Yo{NN}{1} & w_3\Yo{NN}{1} & \cdots & w_n\Yo{NN}{1} \\
-    w_1\Ye{NN}{1} & w_2\Ye{NN}{1} & w_3\Ye{NN}{1} & \cdots & w_n\Ye{NN}{1}
+    1 & 0 & 0 & \cdots & 0 \\
+    0 & 1 & 0 & \cdots & 0 \\
+    0 & 0 & 1 & \cdots & 0 \\
+    \vdots & \vdots & \vdots & & \vdots \\
+    0 & 0 & 0 & \cdots & 1    
   \end{pmatrix}}\:.
 \end{equation}
 %
-The scattering cross sections are defined
+Finally, the new scattering cross section matrix is
 \begin{equation}
   [\ve{S}]_{gg'} = \begin{pmatrix}
-    \sigg{0} & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
-    0 & \sigg{1} & 0 & 0 & 0 & 0 & 0 & 0 \\
-    0 & 0 & \sigg{1} & 0 & 0 & 0 & 0 & 0 \\
-    0 & 0 & 0 & \sigg{1} & 0 & 0 & 0 & 0 \\
-    0 & 0 & 0 & 0 & \sigg{2} & 0 & 0 & 0 \\
-    0 & 0 & 0 & 0 & 0 & \ddots   & 0 & 0 \\
-    0 & 0 & 0 & 0 & 0 & 0 & \sigg{N} & 0 \\
-    0 & 0 & 0 & 0 & 0 & 0 & 0 & \sigg{N}
+    \Sij{1}{1} & \Sij{2}{1} & \Sij{3}{1} & \cdots & \Sij{n}{1} \\
+    \Sij{1}{2} & \Sij{2}{2} & \Sij{3}{2} & \cdots & \Sij{n}{2} \\
+    \Sij{1}{3} & \Sij{2}{3} & \Sij{3}{3} & \cdots & \Sij{n}{3} \\
+    \vdots     & \vdots     & \vdots     &        & \vdots     \\    
+    \Sij{1}{n} & \Sij{2}{n} & \Sij{3}{n} & \cdots & \Sij{n}{n} \\
   \end{pmatrix}\:.
 \end{equation}
-
-Finally, the flux and source moment vectors are defined
-\begin{align}
-  [q_e]_g &= \begin{pmatrix}
-    \qe_{00} & \qe_{10} & \qo_{11} & \qe_{11} & \qe_{20}
-    & \cdots & \qo_{NN} & \qe_{NN}
-  \end{pmatrix}^T\:.
-\end{align}
-
-%-----------------------------------------------------------
-\subsection*{Sizing}
-The sizes used in Denovo are
-\begin{equation}
-  \begin{aligned}
-    N_g &= \text{number of groups}\:,\\
-    t   &= \text{number of moments}\:,\\
-    n   &= \text{number of angles}\:,\\
-    N   &= \text{$P_N$ order}\:,\\
-    N_c &= \text{number of cells}\:,\\
-    N_e &= \text{number of unknowns per cell}\:.
-  \end{aligned}
-\end{equation}
-Now, we define
-\begin{align}
-  a &= N_g\times n\times N_c\times N_e\:,\\
-  f &= N_g\times t\times N_c\times N_e\:.
-\end{align}
-In the new formulation I believe that $N$ becomes the Lagrange order, but that doesn't seem to factor in to any sizing.
-
-The operator sizes of the \textbf{original} formulation are
-\begin{align*}
-\ve{I} &= (f \times f) \\
-\ve{D} &= (f \times a) \\
-\ve{L} = \ve{L^{-1}} &= (a \times a) \\
-\ve{M} &= (a \times f) \\
-\ve{S} &= (f \times f) \\
-\vec{\phi} &= (f \times 1) \\
-\vec{\psi} &= (a \times 1) \\
-\vec{Q} &= (a \times 1)
-\end{align*}
 
 The operator sizes of the \textbf{new} formulation become
 \begin{align*}
@@ -357,7 +343,7 @@ The operator sizes of the \textbf{new} formulation become
 \vec{\psi} &= (a \times 1) \\
 \vec{Q} &= (a \times 1)
 \end{align*}
-I think this means that as long as we store the fluxes in the moments field (functionally such that $t$ = $n$?) then the sizing of everything will work out...
+I think functionally that $t$ = $n$ (so $f$ = $a$) in this new formulation, so the sizing of everything will work out based on the current implementation...
 
 
 \end{document}
