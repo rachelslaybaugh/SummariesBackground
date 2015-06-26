@@ -46,6 +46,7 @@
 \maketitle
 
 \section*{General Memory}
+Taken from \href{http://thehackerwithin.github.io/berkeley/images/2015.03.18-architecture.pdf}{http://thehackerwithin.github.io/berkeley/images/2015.03.18-architecture.pdf} and some from wikipedia.
 
 \begin{figure}[!ht]
 \begin{center}
@@ -58,7 +59,7 @@ Code structure: code is compiled into an assembly program (.s). An assembler tur
 
 Assembly operands are registers: limited \# of special locations built directly into the hardware (very fast). The MIPS instructions are 32 bits. 
 
-Memory Allocation: \textit{program} (doesn't change size) \rightarrow \textit{static}, variables declared once per program (doesn't change size) \rightarrow \textit{heap}, explicitly created space using e.g.\ malloc \rightarrow \textit{stack}, space for local variables, saved procedure info, etc. (there's a stack pointer that says where this stops.
+Memory Allocation: \textit{program} (doesn't change size) $\rightarrow$ \textit{static}, variables declared once per program (doesn't change size) $\rightarrow$ \textit{heap}, explicitly created space using e.g.\ malloc $\rightarrow$ \textit{stack}, space for local variables, saved procedure info, etc. (there's a stack pointer that says where this stops.
 
 Once everything is compiled, the machine instructions get translated into memory locations, and switches fire to combine trues and falses (
 high/low voltage) to make things actually happen.
@@ -75,8 +76,30 @@ In execution,
 \textbf{Pipelining Hazards}:
 \begin{itemize}
   \item structural hazard: a required resource is busy (e.g.\ needed in multiple stages) 
-  \item data hazard: data dependency between instructions; need to wait for previous instruction to complete its data read/write
+  \item data hazard: data dependency between instructi
+  ons; need to wait for previous instruction to complete its data read/write
   \item control hazard: flow of execution depends on previous instruction
+\end{itemize}
+
+There are XMM registers that are 128 bits each. They take Streaming SIMD Extensions (SSE), an instruction set that works on these in parallel (fetch one instruction, do the work of multiple instructions). Looks like it takes x things (x/2 sets of 2) and does the same operation on each set. 16 x 8 bits or 8 x 16 bit operands.
+
+Layout: 
+\begin{itemize}
+  \item processor holds data in register file ($\sim$100 Bytes); registers accessed on nanosecond timescale
+  \item ``main" memory has more capacity ($\sim$Gbytes); access is $\sim$50-100 ns; hundreds of clock cycles per memory access
+  \item disk has \textit{huge} capacity; very slow $\sim$ ms
+\end{itemize}	
+
+\textbf{Memory cache} need comes from mismatch between processor and memory speeds. 
+It's faster but more expensive than DRAM memory.
+It's a copy of a subset of main memory; most processors have separate caches for instructions and data.
+In a \textit{direct-mapped} cache, each memory address is associated with one possible block (unit of transfer between cache and memory) within the cache.
+
+Cache misses (failed attempt to read or write a piece of data, resulting in going to main memory): 
+\begin{itemize}
+  \item compulsory/cold: when a program tries to use something that the program has never requested before. Prefetching and larger cache block sizes can help, though this increases the miss penalty and very large blocks can increase the miss rate.
+  \item capacity: cache cannot contain all blocks accessed by the program. Increase cache size, which may increase access time. 
+  \item conflict/collision: multiple memory locations mapped to the same cache location. Can increase cache size; increase associativety (may increase access time). 
 \end{itemize}
 
 \end{document}
