@@ -1,0 +1,70 @@
+\documentclass[12pt,twoside]{article}
+\usepackage[top=1in, bottom=1in, left=1in, right=1in]{geometry}
+\usepackage{setspace}
+\onehalfspacing
+
+\usepackage{amssymb}
+%% The amsthm package provides extended theorem environments
+\usepackage{amsthm}
+\usepackage{epsfig}
+\usepackage{times}
+\renewcommand{\ttdefault}{cmtt}
+\usepackage{amsmath}
+\usepackage{graphicx} % for graphics files
+\usepackage{tabu}
+
+\usepackage{hyperref}
+\date{\today}
+\title{Notes on Metaheuristic Algorithms}
+\author{Rachel Slaybaugh}
+\begin{document}
+\maketitle
+
+A\textbf{ metahueristic algorithm} is a higher-level procedure or heuristic designed to find, generate, or select a heuristic (partial search algorithm) that may provide a sufficiently good solution to an optimization problem, especially with incomplete or imperfect information or limited computation capacity. Metaheuristics sample a set of solutions which is too large to be completely sampled. Metaheuristics may make few assumptions about the optimization problem being solved, and so they may be usable for a variety of problems. 
+
+Compared to optimization algorithms and iterative methods, metaheuristics do not guarantee that a globally optimal solution can be found on some class of problems. By searching over a large set of feasible solutions, metaheuristics can often find good solutions with less computational effort than optimization algorithms, iterative methods, or simple heuristics.\\
+\href{https://en.wikipedia.org/wiki/Metaheuristic}{https://en.wikipedia.org/wiki/Metaheuristic}
+
+\vspace*{1 em}
+The \textbf{travelling salesman problem} (TSP) asks the following question: Given a list of cities and the distances between each pair of cities, what is the shortest possible route that visits each city exactly once and returns to the origin city? It is an NP-hard problem in combinatorial optimization, important in operations research and theoretical computer science.\\ \href{https://en.wikipedia.org/wiki/Travelling_salesman_problem}{https://en.wikipedia.org/wiki/Travelling\_salesman\_problem}
+
+\vspace*{1 em}
+\textbf{Components of metaheuristic solutions}: 
+\begin{itemize}
+\item intensification (drawn from survival of the fittest) searches around the current best solutions and selects the best candidates or solutions
+\item diversification (drawn from adaptation to the environment) makes sure the algorithm can explore the search space efficiently.
+
+\section*{Cuckoo Search}
+Yang, Xin-She and Deb, Suash. ``Cuckoo Search via L\'evy Flights." IEEE 2009.
+
+(A L\'evy flight is a random walk in which the step-lengths have a probability distribution that is heavy-tailed. When defined as a walk in a space of dimension greater than one, the steps made are in isotropic random directions. \href{https://en.wikipedia.org/wiki/Levy_flight}{https://en.wikipedia.org/wiki/L\'evy\_flight})
+
+Assumptions in the algorithm (modeling parasitic laying behavior):
+\begin{enumerate}
+\item Each cuckoo lays one egg at a time and dumps its egg in a randomly chosen nest
+\item the best nests with the highest quality eggs will carry over to the next generations
+\item The number of available host nests is fixed ($n$) and the egg laid by a cuckoo is discovered with probability $p_a \in [0,1]$. In the case of discovery the bird can either abandon the nest or throw the egg away. Functionally, $p_a \times n$ nests are replaced by new nests.
+\end{enumerate}
+%
+The analogy is that all eggs in nests are solutions and cuckoo eggs are new solutions. The goal is to replace existing solutions with new ones that are hopefully better.
+
+psuedoalgorithm on page 211. 
+
+L\'evy flights are used to get new cuckoos. That is, a new solution for a given cuckoo uses a L\'evy flight process. The idea here is that L\'evy flights are more efficient at exploring the search space as the average step length is longer. New solutions will be generated around the best solution so far (intensification) while some new solutions will com from far field, randomized locations (diversification). \\
+For cuckoo $i$ generating solution $\mathbf{x}_i^{(t+1)}$:
+\begin{align*}
+\mathbf{x}_i^{(t+1)} &= \mathbf{x}_i^{(t)} + \alpha \oplus \text{L\'evy}(\lambda)\\
+&\text{L\'evy} \sim u = t^{-\lambda} \:, \quad 1 < \lambda \leq 3
+\end{align*}
+Note that $\oplus$ means entry-wise multiplication.
+
+For expansion, each next can contain more than one egg (a set of solutions; meta-population). Some performance evidence suggests CS will be \textit{good for multimodal and multiobjective optimization problems}. They say that $n=15$ and $p_a=0.25$ are good and solutions are insensitive to this choice; however, they provide no evidence. For their tests, CS outperformed particle swarm optimization (PSO) and genetic algorithms (GA) using multimodal objective functions. They say this is b/c there are few parameters to tune (2) and the intensification / diversification balance. 
+
+
+
+\end{itemize}
+
+%------------- Bibliography --------------------
+
+
+\end{document}
