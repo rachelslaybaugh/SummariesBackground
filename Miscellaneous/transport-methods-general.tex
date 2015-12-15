@@ -3,10 +3,15 @@
 \date{\today}
 \title{Notes on Transport Methods in General}
 \author{Rachel Slaybaugh}
+
+\newcommand{\vOmega}{\ensuremath{\hat{\Omega}}}
+\newcommand{\ve}[1]{\ensuremath{\mathbf{#1}}}
+
+
 \begin{document}
 \maketitle
 
-\section{Quasi-Diffusion}
+\section*{Quasi-Diffusion}
 
 Miften and Larsen summary \cite{Miften1993}
 
@@ -29,19 +34,19 @@ In general this is all just an acceleration method, so some of the math steps ar
 \vspace*{2em}
 The original work is by Gol'din \cite{Goldin1964}; it's old and I think the Miften and Larsen paper is much clearer. 
 
-\section{$\alpha$ eigenvalues}
+\section*{$\alpha$ eigenvalues}
 
-What follows is from Hill~\cite{Hill1983} and \cite{Dahl2006}.\\
+What follows is from Hill~\cite{Hill1983}, \cite{Dahl2006}, and \cite{Shen2015} (piecing together the papers, I think I've got this right...).
+
 The time absorption, or $\alpha$, eigenvalue is an explicit eigenvalue problem. 
-To go from time dependence to a time-independent eigenvalue problem, they assume time separability as
-\[
-\psi(\vec{r}, \vOmega, t) = \exp^{\alpha t) \psi(\vec{r}, \vOmega)
-\]
-
-The multigroup, $\alpha$-eval form of the TE is written as follows:
-\[
-\ve{L} \psi(\vec{r}, \vOmega) + (\ve{\Sigma_t} + \alpha \ve{V}^{-1}) \psi(\vec{r}, \vOmega) = (\ve{S} + \frac{1}{\lambda}\ve{F}) \psi(\vec{r}, \vOmega)
-\]
+We begin with the time dependent TE, assume a time separability for the flux, substitute that in to convert to the time independent $\alpha$-eval form of the TE, and simultaneously add a fictitious intermediate eigenvalue (note that the flux is a vector over energy; we are using the multigroup assumption):
+\begin{align*}
+\ve{V}^{-1} \frac{\partial \psi}{\partial t} &+ (\ve{L} + \ve{\Sigma_t}) \psi(\vec{r}, \vOmega, t) = (\ve{S} + \ve{F})\psi(\vec{r}, \vOmega, t)\\
+\psi(\vec{r}, \vOmega, t) &= \exp^{\alpha t} \psi(\vec{r}, \vOmega)\\
+%
+\ve{L} \psi(\vec{r}, \vOmega) &+ (\ve{\Sigma_t} + \alpha \ve{V}^{-1}) \psi(\vec{r}, \vOmega) = (\ve{S} + \frac{1}{\lambda}\ve{F}) \psi(\vec{r}, \vOmega)
+\end{align*}
+%
 here
 \begin{align*}
 \ve{L} &=\text{ leakage operator}\\
@@ -51,20 +56,39 @@ here
 \ve{F} &=\text{ fission operator}\\
 \lambda &=\text{ is an intermediate eigenvalue}
 \end{align*}
-We see a solution set $\alpha$, $\vec{\psi}$ that gives $\lambda = 1$. 
-If $\alpha=0$, the $\lambda = k_{eff}$ .
+We treat this like a $k$-eigenvalue problem, recognizing that $\alpha$ is unknown (if $\alpha=0$, then $\lambda = k_{eff}$). 
+
+We search for a solution set, $\alpha$ and $\vec{\psi}$, that gives $\lambda = 1$.
 Inner iterations are performed for a single group on the within-group scattering source.
 Outer iterations are performed on the fission source, giving the intermediate eigenvalue.
+We treat angle with a discrete ordinates approximation and space with something like a finite difference method. 
 
-The $\alpha$ eigenvalue problem is solved as a sequence of $\lambda$ eigenvalues until an $\alpha$ for which $\lambda = 1$ is found. 
+The $\alpha$ eigenvalue problem is solved as a sequence of $\lambda$ eigenvalue calculations until an $\alpha$ for which $\lambda = 1$ is found. 
+We perform power iteration (or equivalent) to find each $\lambda$ value and then find $\alpha$. 
+(Note, you cannot use PI to find $\alpha$ directly because the fundamental mode does not correspond to the largest eigenvalue).
+The thing that varies between $\alpha$ eigenvalue methods is how you then choose $\alpha^{k+1}$ based on $\alpha^k$, $\lambda^k$, and $\psi^k$ using $\alpha$ iteration index $k$.
+
+To find each $\lambda^k$, we do power iteration. 
+In general, this requires a guess for the first $\alpha$, usually $\alpha=0$, and sometimes the second (depending on method). 
+We also need a starting guess for $\lambda$ and $\psi$. Thus, we get an updated $\psi$ and $\lambda$ as:
+\begin{align*}
+\ve{L} \psi^k &+ (\ve{\Sigma_t} - \alpha^{k-1} \ve{V}^{-1}) \psi^k -\ve{S}\psi^k = \frac{1}{\lambda^{k-1}} \ve{F} \psi^{k-1}\\
+\lambda^k &= \lambda^{k-1}\frac{\ve{F} \psi^k}{\ve{F} \psi^{k-1}}\:,
+\end{align*}
+which is done until 
+\[
+|\frac{\lambda^k}{\lambda^{k-1}} - 1 | \leq \epsilon^k\:.
+\]
+
+Now, we use the updated $\lambda$ to find $\alpha^k$ in hopes of getting a $\lambda^{k+1}$ that is closer to 1. 
 This $\alpha$ iteration overlying the outer and inner iterations is
 \[
-\ve{L} \psi^k(\vec{r}, \vOmega) + (\ve{\Sigma_t} + \alpha^k \ve{V}^{-1}) \psi^k(\vec{r}, \vOmega) = (\ve{S} + \frac{1}{\lambda^k}\ve{F}) \psi^k(\vec{r}, \vOmega)
+\ve{L} \psi^k(\vec{r}, E, \vOmega) + (\ve{\Sigma_t} + \alpha^k \ve{V}^{-1}) \psi^k(\vec{r}, E, \vOmega) = (\ve{S} + \frac{1}{\lambda^k}\ve{F}) \psi^k(\vec{r}, E, \vOmega)
 \]
-The thing that varies between $\alpha$ eigenvalue methods is how you then choose $\alpha^{k+1}$ based on $\alpha^k$, $\lambda^k$, and $\psi^k$.
+The thing that varies between $\alpha$ eigenvalue methods is how you then choose $\alpha^{k+1}$ based on $\alpha^k$, $\lambda^k$, and $\psi^k$ or sometimes you use further past iterates. 
+Lots of  papers on this.
 
-
-Next is one about using DSA \cite{Dahl2006}. The newest is this \cite{Fichtl}.
+Dahl talks about using DSA~\cite{Dahl2006}; Fichtl talks about a non-linear method~\cite{Fichtl}; Shen has a good lit review near the opening~\cite{Shen2015}.
 
 
 %------------- Bibliography --------------------
