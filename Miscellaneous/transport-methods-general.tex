@@ -10,16 +10,16 @@
 
 Miften and Larsen summary \cite{Miften1993}
 
-Miften and Larsen re-derive the quasi-diffusion (QD) equations that has an "Eddington factor" that is invariante under a change in amplitude of $\psi$ and independent of $\psi$ when it is a linear function of $\mu$. The derivation they go through doesn't appear to hold is scattering is anything other than isotropic.
+Miften and Larsen re-derive the quasi-diffusion (QD) equations that has an "Eddington factor" that is invariant under a change in amplitude of $\psi$ and independent of $\psi$ when it is a linear function of $\mu$. The derivation they go through doesn't appear to hold is scattering is anything other than isotropic.
 
 The ultimate contributions are
 \begin{enumerate}
-\item a derivaiton in spherical coordinates that guarantees positivity of the analytic solution
+\item a derivation in spherical coordinates that guarantees positivity of the analytic solution
 \item new diffusion boundary conditions in planar and spherical that are more accurate and efficient
-\item discretization of the new analystic forms of the QD using short characteristics, which helps ensure positivity.
+\item discretization of the new analytic forms of the QD using short characteristics, which helps ensure positivity.
 \end{enumerate} 
 
-An interesting thing they do is apply a shift in the power iteration method for the eigenvalue. They subtract a perturbation of the smaller of the absoprtion cross section OR the fission term from each side. 
+An interesting thing they do is apply a shift in the power iteration method for the eigenvalue. They subtract a perturbation of the smaller of the absorption cross section OR the fission term from each side. 
 
 They also do a modified QD where they have an adjustable tuning parameter that's based on quadrature, $c$ and $\sigma_T h$ - turns out the Russians did this earlier (Anistratov comment). 
 
@@ -29,8 +29,46 @@ In general this is all just an acceleration method, so some of the math steps ar
 \vspace*{2em}
 The original work is by Gol'din \cite{Goldin1964}; it's old and I think the Miften and Larsen paper is much clearer. 
 
+\section{$\alpha$ eigenvalues}
+
+What follows is from Hill~\cite{Hill1983} and \cite{Dahl2006}.\\
+The time absorption, or $\alpha$, eigenvalue is an explicit eigenvalue problem. 
+To go from time dependence to a time-independent eigenvalue problem, they assume time separability as
+\[
+\psi(\vec{r}, \vOmega, t) = \exp^{\alpha t) \psi(\vec{r}, \vOmega)
+\]
+
+The multigroup, $\alpha$-eval form of the TE is written as follows:
+\[
+\ve{L} \psi(\vec{r}, \vOmega) + (\ve{\Sigma_t} + \alpha \ve{V}^{-1}) \psi(\vec{r}, \vOmega) = (\ve{S} + \frac{1}{\lambda}\ve{F}) \psi(\vec{r}, \vOmega)
+\]
+here
+\begin{align*}
+\ve{L} &=\text{ leakage operator}\\
+\ve{\Sigma_t} &=\text{ diagonal matrix of group total cross sections}\\
+\ve{V} &=\text{ diagonal matrix of neutron group speeds}\\
+\ve{S} &=\text{ scattering operator}\\
+\ve{F} &=\text{ fission operator}\\
+\lambda &=\text{ is an intermediate eigenvalue}
+\end{align*}
+We see a solution set $\alpha$, $\vec{\psi}$ that gives $\lambda = 1$. 
+If $\alpha=0$, the $\lambda = k_{eff}$ .
+Inner iterations are performed for a single group on the within-group scattering source.
+Outer iterations are performed on the fission source, giving the intermediate eigenvalue.
+
+The $\alpha$ eigenvalue problem is solved as a sequence of $\lambda$ eigenvalues until an $\alpha$ for which $\lambda = 1$ is found. 
+This $\alpha$ iteration overlying the outer and inner iterations is
+\[
+\ve{L} \psi^k(\vec{r}, \vOmega) + (\ve{\Sigma_t} + \alpha^k \ve{V}^{-1}) \psi^k(\vec{r}, \vOmega) = (\ve{S} + \frac{1}{\lambda^k}\ve{F}) \psi^k(\vec{r}, \vOmega)
+\]
+The thing that varies between $\alpha$ eigenvalue methods is how you then choose $\alpha^{k+1}$ based on $\alpha^k$, $\lambda^k$, and $\psi^k$.
+
+
+Next is one about using DSA \cite{Dahl2006}. The newest is this \cite{Fichtl}.
+
+
 %------------- Bibliography --------------------
-\bibliographystyle{model1-num-names}
+\bibliographystyle{siam}
 \bibliography{te_general}
 
 \end{document}
