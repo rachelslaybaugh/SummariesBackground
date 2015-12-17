@@ -6,36 +6,6 @@
 
 \newcommand{\ve}[1]{\ensuremath{\mathbf{#1}}}
 
-%\newcommand{\vOmega}{\ensuremath{\ve{\Omega}}}
-%\newcommand{\hOmega}{\ensuremath{\hat{\ve{\Omega}}}}
-%\newcommand{\Ye}[2]{\ensuremath{Y^e_{#1}(\vOmega_#2)}}
-%\newcommand{\Yo}[2]{\ensuremath{Y^o_{#1}(\vOmega_#2)}}
-%
-%\newcommand{\Jij}[2]{\ensuremath{\int L(\vOmega_#1)L(\vOmega_#2)}}
-%\newcommand{\Sij}[2]{\ensuremath{\sigma^{gg'}_{\text{s}}(\vOmega_#1 \cdot \vOmega_#2)}}
-%
-%\newcommand{\sigg}[1]{\ensuremath{\sigma^{gg'}_{\text{s}\,#1}}}
-%\newcommand{\psig}{\ensuremath{\psi^g}}
-%
-%\newcommand{\even}{\ensuremath{\phi^g}}
-%\newcommand{\odd}{\ensuremath{\vartheta^g}}
-%
-%\newcommand{\evenp}{\ensuremath{\phi^{g'}}}
-%\newcommand{\oddp}{\ensuremath{\vartheta^{g'}}}
-%
-%\newcommand{\qe}{\ensuremath{q^g}}
-%\newcommand{\qo}{\ensuremath{s^g}}
-%
-%\newcommand{\apsi}[1]{\ensuremath{\psi^{\dagger\,#1}}}
-%\newcommand{\aeven}[1]{\ensuremath{\phi^{\dagger\,#1}}}
-%\newcommand{\aodd}[1]{\ensuremath{\vartheta^{\dagger\,#1}}}
-%\newcommand{\asigg}[1]{\ensuremath{\sigma^{g'g}_{\text{s}\,#1}}}
-%
-%\newcommand{\Di}{\ensuremath{\Delta_i}}
-%\newcommand{\Dj}{\ensuremath{\Delta_j}}
-%\newcommand{\Dk}{\ensuremath{\Delta_k}}
-%
-%\DeclareMathOperator{\octant}{Octant}
 
 \date{\today}
 \title{Notes on Computer Hardware \\and Advanced Architectures}
@@ -61,8 +31,7 @@ Assembly operands are registers: limited \# of special locations built directly 
 
 Memory Allocation: \textit{program} (doesn't change size) $\rightarrow$ \textit{static}, variables declared once per program (doesn't change size) $\rightarrow$ \textit{heap}, explicitly created space using e.g.\ malloc $\rightarrow$ \textit{stack}, space for local variables, saved procedure info, etc. (there's a stack pointer that says where this stops.
 
-Once everything is compiled, the machine instructions get translated into memory locations, and switches fire to combine trues and falses (
-high/low voltage) to make things actually happen.
+Once everything is compiled, the machine instructions get translated into memory locations, and switches fire to combine trues and falses (high/low voltage) to make things actually happen.
 
 In execution, 
 \begin{enumerate}
@@ -76,8 +45,7 @@ In execution,
 \textbf{Pipelining Hazards}:
 \begin{itemize}
   \item structural hazard: a required resource is busy (e.g.\ needed in multiple stages) 
-  \item data hazard: data dependency between instructi
-  ons; need to wait for previous instruction to complete its data read/write
+  \item data hazard: data dependency between instructions; need to wait for previous instruction to complete its data read/write
   \item control hazard: flow of execution depends on previous instruction
 \end{itemize}
 
@@ -105,6 +73,32 @@ Cache misses (failed attempt to read or write a piece of data, resulting in goin
 \section*{GPU Memory Overview}
 \href{http://gpgpu.org/static/sc2006/slides/03.owens.memoryModelOverview.pdf}{http://gpgpu.org/static/sc2006/slides/03.owens.memoryModelOverview.pdf}
 
+
+\section*{MICs}
+Intel XeonPhi, some background
+\begin{itemize}
+\item CMOS\textemdash complementary metal oxide semiconductor\textemdash is a technology for constructing integrated circuits. Is used in microprocessors, among others. Usually pairs of p-type and n-type metal oxide semiconductor field effect transistors for logic functions. Use low power and have high noise immunity; less waste heat. Enables high density of logic functions on a chip. \href{https://en.wikipedia.org/wiki/CMOS}{https://en.wikipedia.org/wiki/CMOS} 2015.12.16.
+
+\item 22 nm (vs.\ 14 nm) process node: typical half-pitch for a memory cell in a CMOS. KNC uses 22 nm and KNL usses 14 nm. I don't understand much about this, but it sounds like how many memory components can fit on a device is controlled / limited by this. \href{https://en.wikipedia.org/wiki/Xeon_Phi}{https://en.wikipedia.org/wiki/Xeon_Phi} 2015.12.17.
+
+\item texture sampling is used to determine the texture color for a texture mapped pixel; this is a type of anti-aliasing \href{https://en.wikipedia.org/wiki/Texture_filtering}{https://en.wikipedia.org/wiki/Texture_filtering} 2015.12.17.
+
+\item Mesh network is a network topology in which each node relays data for the network. All mesh nodes cooperate in the distribution of data in the network. Mesh networks can relay messages using either a flooding technique or a routing technique. With routing, the message is propagated along a path by hopping from node to node until it reaches its destination. To ensure all its paths' availability, the network must allow for continuous connections and must reconfigure itself around broken paths, using self-healing algorithms such as Shortest Path Bridging. \href{https://en.wikipedia.org/wiki/Mesh_networking}{https://en.wikipedia.org/wiki/Mesh_networking} 2015.12.17.
+
+\item Knights Corner uses Intel's Tri-gate technology with more than 50 cores per chip and was Intel's first MIC, released in late 2011/mid 2012. 22nm: Xeon Phi 3100 could do 1 tFLOPS of double precision, 240 GB/s memory bandwidth at 300 W. Xeon Phi 5110P was 1.01 tFLOPS of double precision, 320 GB/s at 225 W. Xeon Phi 7120P was 1.2 tFLOPS and 352 GB/s @ 300 W.
+
+\item Knights Landing 
+
+\end{itemize}
+
+\href{https://software.intel.com/sites/default/files/managed/e9/b5/Knights-Corner-is-your-path-to-Knights-Landing.pdf}{https://software.intel.com/sites/default/files/managed/e9/b5/Knights-Corner-is-your-path-to-Knights-Landing.pdf} 2015.12.16
+\begin{itemize}
+\item coprocessors require workloads to have concurrency across multiple dimensions - generally not there in supercomputers today.
+\item can use OpenMP, MPI, Fortran, TBB, C++
+\item need thread scaling, vectorization profitability, and fabric scaling (I don't even know what that is)
+\item KNL has better serial code performance, more memory than KNC. KNC requires direct coding for vector intrinsics, KNC has static parameters; KNL has integrated fabric that is better for scaling
+\item This ppt had some book and code references near the end
+\end{itemize}
 
 
 
