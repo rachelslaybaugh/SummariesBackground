@@ -79,16 +79,19 @@ Intel XeonPhi, some background
 \begin{itemize}
 \item CMOS\textemdash complementary metal oxide semiconductor\textemdash is a technology for constructing integrated circuits. Is used in microprocessors, among others. Usually pairs of p-type and n-type metal oxide semiconductor field effect transistors for logic functions. Use low power and have high noise immunity; less waste heat. Enables high density of logic functions on a chip. \href{https://en.wikipedia.org/wiki/CMOS}{https://en.wikipedia.org/wiki/CMOS} 2015.12.16.
 
-\item 22 nm (vs.\ 14 nm) process node: typical half-pitch for a memory cell in a CMOS. KNC uses 22 nm and KNL usses 14 nm. I don't understand much about this, but it sounds like how many memory components can fit on a device is controlled / limited by this. \href{https://en.wikipedia.org/wiki/Xeon_Phi}{https://en.wikipedia.org/wiki/Xeon_Phi} 2015.12.17.
+\item 22 nm (vs.\ 14 nm) process node: typical half-pitch for a memory cell in a CMOS. KNC uses 22 nm and KNL usses 14 nm. I don't understand much about this, but it sounds like how many memory components can fit on a device is controlled / limited by this. \href{https://en.wikipedia.org/wiki/Xeon_Phi}{https://en.wikipedia.org/wiki/Xeon\_Phi} 2015.12.17.
 
-\item texture sampling is used to determine the texture color for a texture mapped pixel; this is a type of anti-aliasing \href{https://en.wikipedia.org/wiki/Texture_filtering}{https://en.wikipedia.org/wiki/Texture_filtering} 2015.12.17.
+\item texture sampling is used to determine the texture color for a texture mapped pixel; this is a type of anti-aliasing \href{https://en.wikipedia.org/wiki/Texture_filtering}{https://en.wikipedia.org/wiki/Texture\_filtering} 2015.12.17.
 
-\item Mesh network is a network topology in which each node relays data for the network. All mesh nodes cooperate in the distribution of data in the network. Mesh networks can relay messages using either a flooding technique or a routing technique. With routing, the message is propagated along a path by hopping from node to node until it reaches its destination. To ensure all its paths' availability, the network must allow for continuous connections and must reconfigure itself around broken paths, using self-healing algorithms such as Shortest Path Bridging. \href{https://en.wikipedia.org/wiki/Mesh_networking}{https://en.wikipedia.org/wiki/Mesh_networking} 2015.12.17.
+\item Mesh network is a network topology in which each node relays data for the network. All mesh nodes cooperate in the distribution of data in the network. Mesh networks can relay messages using either a flooding technique or a routing technique. With routing, the message is propagated along a path by hopping from node to node until it reaches its destination. To ensure all its paths' availability, the network must allow for continuous connections and must reconfigure itself around broken paths, using self-healing algorithms such as Shortest Path Bridging. \href{https://en.wikipedia.org/wiki/Mesh_networking}{https://en.wikipedia.org/wiki/Mesh\_networking} 2015.12.17.
 
 \item Knights Corner uses Intel's Tri-gate technology with more than 50 cores per chip and was Intel's first MIC, released in late 2011/mid 2012. 22nm: Xeon Phi 3100 could do 1 tFLOPS of double precision, 240 GB/s memory bandwidth at 300 W. Xeon Phi 5110P was 1.01 tFLOPS of double precision, 320 GB/s at 225 W. Xeon Phi 7120P was 1.2 tFLOPS and 352 GB/s @ 300 W.
 
-\item Knights Landing 
+\item Knights Landing can be used as a coprocessor or as a host processor. Made with thr 14nm process. KNL has integrated on-package memory, so much higher memory bandwidth. 
 
+Up to 72 Airomont (atom, which are low powered) cores with 4 threads/core; 384 GB of ``far" DDR4 Ram and 6-16 GB of stacked ``near" 3D MCDRAM; 512 bit vector units, AVX-512F SIMD instructions and conflict detection instructions (CDI), exponential and reciprocal instructions (ERI), and prefetch instructions (PFI), and x86 instruction set except (TSK). 160-215 W
+
+\item Knights Hill is the next thing, which will have a 10 nm process and will be deployed in Aurora at ANL in 2018. 
 \end{itemize}
 
 \href{https://software.intel.com/sites/default/files/managed/e9/b5/Knights-Corner-is-your-path-to-Knights-Landing.pdf}{https://software.intel.com/sites/default/files/managed/e9/b5/Knights-Corner-is-your-path-to-Knights-Landing.pdf} 2015.12.16
