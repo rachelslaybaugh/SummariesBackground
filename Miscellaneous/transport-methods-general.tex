@@ -1,5 +1,6 @@
 \documentclass[12pt,twoside]{article}
 \usepackage{amsmath}
+\usepackage{hyperref}
 \date{\today}
 \title{Notes on Transport Methods in General}
 \author{Rachel Slaybaugh}
@@ -34,6 +35,8 @@ In general this is all just an acceleration method, so some of the math steps ar
 \vspace*{2em}
 The original work is by Gol'din \cite{Goldin1964}; it's old and I think the Miften and Larsen paper is much clearer. 
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section*{$\alpha$ eigenvalues}
 
 What follows is from Hill~\cite{Hill1983}, \cite{Dahl2006}, and \cite{Shen2015} (piecing together the papers, I think I've got this right...).
@@ -89,6 +92,55 @@ The thing that varies between $\alpha$ eigenvalue methods is how you then choose
 Lots of  papers on this.
 
 Dahl talks about using DSA~\cite{Dahl2006}; Fichtl talks about a non-linear method~\cite{Fichtl}; Shen has a good lit review near the opening~\cite{Shen2015}.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section*{Antithetic Variance}
+From Carter and Cashwell's ``Particle-transport simulation with the Monte Carlo method" \href{http://www.osti.gov/scitech/biblio/4167844}{http://www.osti.gov/scitech/biblio/4167844}
+
+Random variables $x$ and $y$ with means $\bar{x}$, $\bar{y}$ have covariance $cov(x,y) = E[(x - \bar{x})(y - \bar{y})]$ where $E[z]$ is the expected value of $z$. 
+If $x$ and $y$ are independent, $cov(x,y)=0$.
+The correlation coefficient of $x$ and $y$ is defined as
+\[
+\rho(x,y) = \frac{cov(x,y)}{[var(x)var(y)]^{1/2}}\:,
+\]
+which has a value between -1 and 1 (Cauchy-Schwarz inequality).
+If $\rho=0$, the variables are said to be uncorrelated, if $>0$ positively correlated, if $<0$ negatively correlated.
+
+We have an estimator $t$ with expectation $\theta$. 
+We seek estimator $t*$ with the same expectation but a negative correlation. 
+Then $(t+t*)/2$ will be an unbiased estimator of $\theta$ with variance
+\[
+var \bigl[\frac{(t + t*)}{2} \bigr] = \frac{var(t)}{4} + \frac{var(t*)}{4} + \frac{cov(t,t*)}{2}\:.
+\]
+If $cov(t,t*) < 0$, then maybe 
+\[var\bigl[\frac{(t + t*)}{2}\bigr] < var(t)\:.\]
+
+They then go through some examples illustrating this concept. 
+
+Prove that given two monotone nondecreasing (nonincreasing) functions $g(x)$ and $q(x)$ with 
+\[
+\int_0^1 q(x) dx = 0
+\]
+Then
+\[
+\int_0^1 g(x)q(x) dx \geq 0
+\]
+They also have defined a strictly monotone estimator $g(x)$ and a corresponding
+\[
+f(x) = \frac{g(x) + g(1-x)}{2}\:,
+\]
+calling $V = var(g)$ and $v_1 = var(f)$. 
+They use the definition of $f(x)$ in combination with the proof to demonstrate that 
+\[
+V_1 \leq \frac{V}{2}\:.
+\]
+They further mention the case for when $g(x)$ is not necessarily monotone. 
+
+``As a simple example of the use of antithetic variates  in a practical situation, Hammersley and Handcomb discuss the problem of calculating the  multiplication rate in a sphere of  fissile material, where it is assumed that fission neutrons are emitted isotropically. In estimating the eigenvalue, they chose that neutrons in pairs from fission  be emitted in opposite directions and made estimates of the expected number of  fissions occurring in the system in each of the two directions. These estimates are negatively correlated since, if one is too large, then the other is too low. A better estimate is then expected to be the arithmetic mean  of the two."  
+
+``Another example mentioned by Spanier and Gelbard involves the use of antithetic variates in estimating resonance integrals. Neutrons born at higher  energies will usually contribute more heavily to the resonance integrals  simply  because they pass through more energies at which  resonances occur. The source of resonance neutrons is sampled in such a manner that a particle born at high energy is paired with a particle born at a correspondingly low energy. These two  contributions are negatively correlated, and using their mean as the value of the contribution can lead to much more efficient sampling of the resonance integrals."
 
 
 %------------- Bibliography --------------------
