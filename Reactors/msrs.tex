@@ -29,4 +29,110 @@ August 1972.
 \item MSRE operated between 1965 and 1969
 \end{compactitem}
 
+
+%-------------------------------------------------------
+%-------------------------------------------------------
+\section*{Modeling MSRs with Serpent}
+\textit{An extended version of the SERPENT-2 code to investigate fuel burn-up
+and core material evolution of the Molten Salt Fast Reactor}, Presented at the
+NuMat 2012 Conference, 22–25 October 2012, Osaka, Japan. (Journal of Nuclear 
+Materials 441 (2013) 473--486)
+
+\begin{compactitem}
+\item Need to deal with on-line fuel reprocessing, which prevents the use of
+commonly available burn-up codes. 
+\item Table of current code capabilities; Serpent \textit{looks} best, but this
+is a paper about Serpent
+\item Common MSR parameters and those studied in the paper. Criticality is
+maintained by extracting or injecting uranium.
+\item Fig.\ 3 shows soluble vs.\ insoluble elements used in calculations
+\end{compactitem}
+
+In their calculations the total molar fraction of heavy metal fluorides is kept
+constant. To do this, thee modify the Bateman equations in the isotopes present 
+in the feed vector:
+\[
+\frac{dN_i}{dt} = \sum_j N_j \phi \cdot \sigma_{j\rightarrow i}  - \sum_j
+N_j\phi \cdot \sigma_{i \rightarrow j} + \sum_j N_j \lambda_j b_{j\rightarrow
+i} - N_i \lambda_i + c_i \sum_{k=HM} N_k\phi \cdot \sigma_{k,f}\:,
+\]
+where $c_i$ is the atomic fraction of $i$ in the feed vector and $\sigma_{k,f}$
+is the one-group fission cross-section of the HM nuclide $k$.
+They also have an equation for the removal of Li explicitly, and to remove
+fission products they add the term
+\[
+-N_l \lambda_{l,repro}\:,
+\]
+where this is for fission product $l$.
+
+"At each sub-step, the one-group cross sections
+and neutron flux are interpolated between the two closest Monte
+Carlo runs. The implementation of reactivity control in the SER-
+PENT-2 depletion algorithm is briefly explained in the following.
+
+At each sub-step, the one-group microscopic cross-sections,
+along with the atomic densities provided by the solution of the system 
+of burn-up equations, are adopted to calculate the infinite
+multiplication factor $k_{inf}$ in the fuel material. In order to correctly
+estimate the reactivity of the system, a correction for the leakage
+term is needed. At each Monte Carlo run performed for neutron
+spectrum calculation and one-group cross-section collapse, the
+effective multiplication factor $k_{eff}$ is also estimated. At this point,
+both $k_{eff}$ and $k_{inf}$ are known. A leakage correction factor can thus
+be calculated at each Monte Carlo run. If this correction factor is
+interpolated at each sub-step between the two closest calculations
+(as it is done for one-group cross-sections), an accurate estimate of
+the effective multiplication factor is available during the whole
+simulation."
+
+The algorithm they have implemented
+\begin{enumerate}
+\item For each burn-up step:
+  \begin{enumerate}
+  \item Estimate one-group cross-sections and $k_{eff}$ through a MC run with
+  the initial material composition (predictor step)
+  \item Calculate the leakage correction factor
+  \end{enumerate}
+\item For each sub-step:
+  \begin{enumerate}
+  \item Interpolate the one-group cross-sections and leakage correction factor
+  between the two closest MC runs
+  \item Solve the system of burn-up eqns.\ and calculate the isotopic
+  composition at the end of the sub-step
+  \item Estimate $k_{eff}$ through the one-group cross-sections and the leakage
+  correction factor
+  \item If $|k_{eff} - k_{eff,tgt}| > \epsilon$: adjust the fissile material
+  injection/extraction rate and repeat the sub-step
+  \end{enumerate}
+\item Run an MC calculation with the final composition to complete the
+corrector step; do the next burn-up step
+\item Use the final composition as the initial composition for the next burn-up
+step
+\end{enumerate}
+
+They found huge sensitivities to cross section libraries, but that was because
+of U-233.
+
+
+%-------------------------------------------------------
+%-------------------------------------------------------
+\section*{Francesco's Talk}
+\textbf{Performance assessment of molten salt reactors fed with low enriched uranium}, Francesco Accardi, 28 Jan 2016.
+
+\begin{compactitem}
+\item Online reprocessing through continuous refueling
+\item Need to take into account that power density is reduced by fuel being in primary loop
+\item Basic parameter items; pros and cons of some materials
+\item Fresh salt feed in, get rid of all noble metals, all gaseous fission products, and some salt (carrier salt + FPs + actinides)
+\item MocDown extension for continuous Feed and Removal\textemdash may be of interest!
+  \begin{compactitem}
+  \item MocDown runs MCNP6.1 and ORIGEN2.2 to get equilibrium core composition
+  \item new method modifies ORIGEN input by adding two new terns in the Bateman eqns.:
+  \[\frac{dN_i}{dt} = \sum_j \bigl(f_{j\rightarrow i} \sigma_j^{tot} \phi + \gamma_{j\rightarrow i} \lambda_j\bigr)N_j - \bigl(\sigma_i^{tot}\phi + \lambda_i \bigr)N_i + F_i - RN_i\]
+  \item Functionally, this deals with figuring out how much HM to add to get enough actinide moles and how much salt to remove to maintain the number of moles overall. This accounts for updating the appropriate number of fluorine atoms.
+  \end{compactitem}
+\end{compactitem}
+
+
+
 \end{document}
