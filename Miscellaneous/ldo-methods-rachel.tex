@@ -223,10 +223,10 @@ The operator sizes of the \textbf{original} formulation are
 We are solving the \textit{LDO} equations, written in operator form in this way:
 %
 \begin{align}
-\ve{L}\vec{\psi} &= \ve{J \Sigma_s}\vec{\psi} + \vec{Q}\\
-\bigl(\ve{I} + \ve{L^{-1} J \Sigma_s}\bigr)\vec{\psi} &= \ve{L^{-1}}\vec{Q} \nonumber \\ 
+\ve{L}\vec{\psi} &= \ve{J \tilde{S}}\vec{\psi} + \vec{Q}\\
+\bigl(\ve{I} + \ve{L^{-1} J \tilde{S}}\bigr)\vec{\psi} &= \ve{L^{-1}}\vec{Q} \nonumber \\ 
 \text{we can say }\ve{L^{-1}} &= \ve{I}\ve{L^{-1}} \qquad \text{and let } \ve{D} \equiv \ve{I} \text{, then} \nonumber\\
-\bigl(\ve{I} + \ve{D L^{-1} J \Sigma_s}\bigr)\vec{\psi} &= \ve{D L^{-1}}\vec{Q}
+\bigl(\ve{I} + \ve{D L^{-1} J \tilde{S}}\bigr)\vec{\psi} &= \ve{D L^{-1}}\vec{Q}
 \end{align}
 % 
 In these equations $\ve{J}$ contains the Lagrange expansion and $\ve{\Sigma_s}$ contains the scattering cross sections ($\sigma_s(\hat{\Omega}_i \cdot \hat{\Omega}_j)$).
@@ -250,15 +250,15 @@ Now,
     \end{pmatrix}
     %%
     \begin{pmatrix}
-      [\ve{\Sigma_s}]_{00} & [\ve{\Sigma_s}]_{01} & [\ve{\Sigma_s}]_{02} & \cdots &
-      [\ve{\Sigma_s}]_{0G} \\
-      [\ve{\Sigma_s}]_{10} & [\ve{\Sigma_s}]_{11} & [\ve{\Sigma_s}]_{12} & \cdots &
-      [\ve{\Sigma_s}]_{1G} \\
-      [\ve{\Sigma_s}]_{20} & [\ve{\Sigma_s}]_{21} & [\ve{\Sigma_s}]_{22} & \cdots &
-      [\ve{\Sigma_s}]_{2G} \\
+      [\ve{\tilde{S}}]_{00} & [\ve{\tilde{S}}]_{01} & [\ve{\tilde{S}}]_{02} & \cdots &
+      [\ve{\tilde{S}}]_{0G} \\
+      [\ve{\tilde{S}}]_{10} & [\ve{\tilde{S}}]_{11} & [\ve{\tilde{S}}]_{12} & \cdots &
+      [\ve{\tilde{S}}]_{1G} \\
+      [\ve{\tilde{S}}]_{20} & [\ve{\tilde{S}}]_{21} & [\ve{\tilde{S}}]_{22} & \cdots &
+      [\ve{\tilde{S}}]_{2G} \\
       \vdots & \vdots & \vdots & \ddots & \vdots \\
-      [\ve{\Sigma_s}]_{G0} & [\ve{\Sigma_s}]_{G1} & [\ve{\Sigma_s}]_{G2} & \cdots &
-      [\ve{\Sigma_s}]_{GG}
+      [\ve{\tilde{S}}]_{G0} & [\ve{\tilde{S}}]_{G1} & [\ve{\tilde{S}}]_{G2} & \cdots &
+      [\ve{\tilde{S}}]_{GG}
     \end{pmatrix}
     \times
     \begin{pmatrix}
@@ -324,7 +324,7 @@ The operator $\ve{D}$ is now just an identity matrix. s, and it is defined
 %
 Finally, the new scattering cross section matrix is
 \begin{equation}
-  [\ve{S}]_{gg'} = \begin{pmatrix}
+  [\ve{\tilde{S}}]_{gg'} = \begin{pmatrix}
     \Sij{1}{1} & \Sij{2}{1} & \Sij{3}{1} & \cdots & \Sij{n}{1} \\
     \Sij{1}{2} & \Sij{2}{2} & \Sij{3}{2} & \cdots & \Sij{n}{2} \\
     \Sij{1}{3} & \Sij{2}{3} & \Sij{3}{3} & \cdots & \Sij{n}{3} \\
@@ -339,7 +339,7 @@ The operator sizes of the \textbf{new} formulation become
 \ve{D} &= (a \times a) \\
 \ve{L} = \ve{L^{-1}} &= (a \times a) \\
 \ve{M} &= (a \times a) \\
-\ve{S} &= (a \times a) \\
+\ve{\tilde{S}} &= (a \times a) \\
 \vec{\psi} &= (a \times 1) \\
 \vec{Q} &= (a \times 1)
 \end{align*}
